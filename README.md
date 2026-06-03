@@ -15,8 +15,8 @@ Coverage is deliberately narrow: **energy and metals only** — WTI crude, Brent
 | | |
 |---|---|
 | ▤ **Live Dashboard** | [predictionx-zeta.vercel.app](https://predictionx-zeta.vercel.app) |
-| ∑ **Pricing & Math** | Black-76 derivation, Kelly sizing, fee adjustments → [`docs/math.html`](docs/math.html) |
-| ◷ **Shadow Testing Results** | 6 weeks of paper-trading analysis → [`docs/shadow_showcase.html`](docs/shadow_showcase.html) |
+| ∑ **Pricing & Math** | Black-76 derivation, Kelly sizing, fee adjustments → [`docs/math.html`](https://bjsgith.github.io/Prediction-X-Public/math.html) |
+| ◷ **Shadow Testing Results** | 6 weeks of paper-trading analysis → [`docs/shadow_showcase.html`](https://bjsgith.github.io/Prediction-X-Public/shadow_showcase.html) |
 | ▢ **Mobile PWA** | Phone-first dashboard architecture & API → [`mobile/README.md`](mobile/README.md) |
 
 ## Engineering highlights
@@ -211,7 +211,7 @@ Pricing and scanning run against Kalshi's unauthenticated public market data; th
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
-The mathematical treatment — `d₂` derivation, vol regimes, time-value decay, scenario shocks, Brier scoring, OLS confidence model, Kelly sizing, and the override mechanism — is rendered with MathJax at **[`docs/math.html`](docs/math.html)**.
+The mathematical treatment — `d₂` derivation, vol regimes, time-value decay, scenario shocks, Brier scoring, OLS confidence model, Kelly sizing, and the override mechanism — is rendered with MathJax at **[`docs/math.html`](https://bjsgith.github.io/Prediction-X-Public/math.html)**.
 
 ---
 
@@ -344,6 +344,13 @@ Every external API — Kalshi (public and signed), yfinance, Pyth Hermes, Anthro
 | [docs/math.html](docs/math.html) | Complete mathematical reference (MathJax) |
 | [docs/shadow_showcase.html](docs/shadow_showcase.html) | Shadow-validation one-pager — the paper-trade evidence that armed live |
 | [mobile/README.md](mobile/README.md) | Mobile PWA dashboard architecture |
+
+---
+
+## Deep dives
+
+- [Pricing & Math](https://bjsgith.github.io/Prediction-X-Public/math.html) — Full derivation: Black-76 `N(d₂)`, vol regimes, Kelly sizing, OLS confidence model, Brier scoring.
+- [Shadow Testing Results](https://bjsgith.github.io/Prediction-X-Public/shadow_showcase.html) — Six weeks of paper-trading analysis — the validation record that armed live execution.
 
 ---
 

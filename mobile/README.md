@@ -2,6 +2,8 @@
 
 **TL;DR** — A read-only, iPhone-first PWA (Vercel) that surfaces the live Kalshi Kelly book from a FastAPI service on the VPS. Six tabs — Portfolio, Positions, Activity, Analytics, Model, Agent. The browser holds no secrets: a Vercel proxy injects the API key and the API reads `pricer_live.db` in `mode=ro`.
 
+**Live deployment:** [predictionx-zeta.vercel.app](https://predictionx-zeta.vercel.app)
+
 A read-only, iPhone-first PWA for tracking the **live Kalshi trading portfolio**, backed by a FastAPI service on the VPS.
 
 The dashboard presents the **live Kelly book exclusively** (`live_mode = 1`). The paper Fixed shadow and pre-live shadow-Kelly history are not surfaced. Six tabs — **Portfolio**, **Positions**, **Activity**, **Analytics**, **Model**, **Agent** — are accessible, together with a persistent agent-health pill in the app bar that navigates to the Agent tab.
