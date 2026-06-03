@@ -10,7 +10,16 @@ Coverage is deliberately narrow: **energy and metals only** — WTI crude, Brent
 
 > **About this repository.** This is a public **showcase** of a personal quantitative-trading project. The implementation lives in a separate private repository; this repo presents the design, methodology, and results. It is meant to be read, not run.
 
-### Engineering highlights
+## Documentation
+
+| | |
+|---|---|
+| ▤ **Live Dashboard** | [predictionx-zeta.vercel.app](https://predictionx-zeta.vercel.app) |
+| ∑ **Pricing & Math** | Black-76 derivation, Kelly sizing, fee adjustments → [`docs/math.html`](docs/math.html) |
+| ◷ **Shadow Testing Results** | 6 weeks of paper-trading analysis → [`docs/shadow_showcase.html`](docs/shadow_showcase.html) |
+| ▢ **Mobile PWA** | Phone-first dashboard architecture & API → [`mobile/README.md`](mobile/README.md) |
+
+## Engineering highlights
 
 - **Real, signed execution.** Live RSA-PSS/SHA-256 request signing against the Kalshi v2 API places limit orders on a real account — not a backtest harness.
 - **First-principles pricing.** Binary contracts are valued as cash-or-nothing digital options via a closed-form Black-76 `N(d₂)` model fit to the futures strip, with regime-aware realized volatility.
@@ -24,7 +33,7 @@ Coverage is deliberately narrow: **energy and metals only** — WTI crude, Brent
 
 ## Problem Statement
 
-Kalshi offers contracts of the form *"Will WTI crude settle above $80 at month-end?"* — each paying \$1 if the condition holds, \$0 otherwise. Economically, each constitutes a **cash-or-nothing digital option** on the underlying futures price. The central hypothesis is that Kalshi-quoted implied probabilities systematically deviate from fair value, since the majority of order flow is not conditioned on the futures curve.
+Kalshi offers contracts of the form *"Will WTI crude settle above $80 at month-end?"* — each paying \$1 if the condition holds, \$0 otherwise. Economically, each constitutes a **cash-or-nothing digital option** on the underlying futures price. The hypothesis: Kalshi-quoted implied probabilities systematically deviate from fair value, because most order flow is not conditioned on the futures curve.
 
 1. **Fetch** the live Kalshi orderbook — YES and NO sides independently (each maintains its own book; the two sides are not complements).
 2. **Build** the underlying price series — the futures strip (Yahoo Finance) for all six series; for gold and silver, the front-of-strip price is replaced with the live Pyth Network Hermes spot (`XAU/USD`, `XAG/USD`), as Kalshi settles those contracts against Pyth rather than COMEX.
@@ -45,7 +54,7 @@ A periodic **fund-manager review** (Claude) reads the accumulated track record, 
 | **Authentication** | Kalshi v2 RSA request signing — `RSA-PSS / SHA-256`, base64, timestamp-bound. The private key resides on the VPS; only the public key is registered with Kalshi. |
 | **Orders** | Limit only (1–99¢). A stale or erroneous signal rests unfilled rather than executing against the book. |
 | **Sizing** | Half-Kelly, `f* = adjusted_edge / (1 − price)`, capped at 10% of bankroll, sized off **cash-on-hand**, funded in decreasing order of `f*` within each cycle. |
-| **Reconciliation** | Pending orders are polled each cycle — `executed` orders record actual fill price and contract count (including fees); `cancelled`/`expired` entries are indicated as such and released. P&L settles on the real fill cost, not the decision-time mid. |
+| **Reconciliation** | Pending orders are polled each cycle — `executed` orders record actual fill price and contract count (including fees); `cancelled`/`expired` entries are flagged and their reserved capital released. P&L settles on the real fill cost, not the decision-time mid. |
 | **Bankroll** | The live Kelly bankroll is the real Kalshi balance, synced every cycle via `sync_live_balance()`. A capital-events ledger separates trading P&L from deposits and withdrawals. |
 | **Kill switch** | Disarming live mode reverts the agent to shadow for all new cycles; open Kalshi orders are unaffected. |
 | **Guardrails** | Stale futures data is rejected before any order is placed (hourly bars older than 6h, daily bars older than 96h). A price frozen at the same value across ≥5 observations within a 12h rolling window (spanning at least 6h) is also rejected. Raw edge ≥ 25pp is forced to `watch` (implausible-edge gate). Per-cycle exposure caps: 20% of account value per series, 40% portfolio-wide. Directional asymmetry cap: 3 same-direction buys per series per cycle. Orders are skipped when no valid ask is present. Settlement deposit deferral prevents double-counting of Kalshi payouts. Startup is refused without valid credentials, and the Kalshi balance is reconciled against the database at initialization. |
@@ -104,7 +113,7 @@ Scope is constrained to asset classes in which a futures-curve or Pyth-spot mode
 
 ## Capabilities
 
-The system is driven by a single `pricer` CLI (Python 3.11+). The surface area, at a glance:
+A single `pricer` CLI (Python 3.11+) drives the system — the surface area at a glance:
 
 | Capability | What it does |
 |---|---|
@@ -265,7 +274,7 @@ Three independent runtime components. Shadow and live operate against **separate
                           └─────────────────────┘
 ```
 
-The agent runs 24/7 as a systemd service and is the sole writer and the only component that holds Kalshi credentials. The FastAPI service is read-only. The PWA neither accesses the database directly nor receives any upstream credentials — a strict separation of write authority, read access, and presentation. The mobile dashboard's architecture is described in **[`mobile/README.md`](mobile/README.md)**.
+The agent runs 24/7 as a systemd service — the sole writer and the only holder of Kalshi credentials. The FastAPI service is read-only. The PWA neither accesses the database directly nor receives any upstream credentials — a strict separation of write authority, read access, and presentation. The mobile dashboard's architecture is described in **[`mobile/README.md`](mobile/README.md)**.
 
 ---
 
