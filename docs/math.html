@@ -1,0 +1,1701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PredictionX — Pricing Engine &amp; Agent Mathematics</title>
+
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [["$", "$"], ["\\(", "\\)"]],
+        displayMath: [["$$", "$$"], ["\\[", "\\]"]],
+        tags: "ams",
+      },
+      options: { skipHtmlTags: ["script","noscript","style","textarea","pre"] },
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500&family=Crimson+Pro:ital,wght@0,300;0,400;0,500;0,600;1,400;1,600&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <style>
+    /* ─── Design Tokens ─────────────────────────────────────────── */
+    :root {
+      --bg:            #08080e;
+      --bg2:           #0b0c16;
+      --surface:       #0f1020;
+      --surface2:      #141528;
+      --border:        #1c1d32;
+      --border2:       #272848;
+      --border3:       #343660;
+
+      --text:          #ddd8cc;
+      --text2:         #b5afc0;
+      --muted:         #7a7490;
+
+      --gold:          #c9a63e;
+      --gold-bright:   #e8c86a;
+      --gold-pale:     rgba(201, 166, 62, 0.12);
+      --gold-glow:     rgba(201, 166, 62, 0.06);
+      --gold-bar:      rgba(201, 166, 62, 0.7);
+
+      --emerald:       #2dd4a0;
+      --emerald-bg:    rgba(45, 212, 160, 0.07);
+      --crimson:       #f47070;
+      --crimson-bg:    rgba(244, 112, 112, 0.07);
+      --violet:        #b09ef8;
+      --violet-bg:     rgba(176, 158, 248, 0.08);
+      --amber:         #f6bc45;
+      --amber-bg:      rgba(246, 188, 69, 0.08);
+      --sky:           #60cde4;
+
+      --code-bg:       #0a0b18;
+    }
+
+    /* ─── Reset ─────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ─── Body ───────────────────────────────────────────────────── */
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Crimson Pro', 'Georgia', serif;
+      font-size: 16.5px;
+      line-height: 1.78;
+      background-color: var(--bg);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* dot-grid overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: radial-gradient(circle, rgba(201,166,62,0.055) 1px, transparent 1px);
+      background-size: 30px 30px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ─── Reading progress bar ───────────────────────────────────── */
+    #progress {
+      position: fixed;
+      top: 0; left: 0;
+      height: 2px;
+      width: 0%;
+      background: linear-gradient(90deg, var(--gold), var(--gold-bright), var(--gold));
+      box-shadow: 0 0 10px var(--gold);
+      z-index: 9999;
+      transition: width 80ms linear;
+    }
+
+    /* ─── Layout ─────────────────────────────────────────────────── */
+    .layout {
+      display: flex;
+      min-height: 100vh;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ─── Hero ───────────────────────────────────────────────────── */
+    .hero {
+      position: relative;
+      z-index: 1;
+      padding: 64px 56px 52px 296px;
+      border-bottom: 1px solid var(--border2);
+      background: linear-gradient(180deg, rgba(201,166,62,0.04) 0%, transparent 100%);
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -120px; right: -60px;
+      width: 600px; height: 600px;
+      background: radial-gradient(ellipse, rgba(201,166,62,0.05) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-eyebrow {
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 0.7rem;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .hero-eyebrow::after {
+      content: '';
+      display: inline-block;
+      width: 40px;
+      height: 1px;
+      background: var(--gold-bar);
+    }
+    .hero-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(2.4rem, 4vw, 3.4rem);
+      font-weight: 600;
+      line-height: 1.12;
+      letter-spacing: -0.01em;
+      background: linear-gradient(135deg, var(--gold-bright) 0%, var(--gold) 40%, #a8862e 70%, var(--gold) 100%);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: goldShimmer 8s ease-in-out infinite;
+      margin-bottom: 16px;
+    }
+    @keyframes goldShimmer {
+      0%, 100% { background-position: 0% center; }
+      50%       { background-position: 100% center; }
+    }
+    .hero-subtitle {
+      font-family: 'Crimson Pro', serif;
+      font-size: 1.15rem;
+      color: var(--text2);
+      max-width: 680px;
+      line-height: 1.6;
+      margin-bottom: 28px;
+    }
+    .hero-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .hero-tag {
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 0.7rem;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 2px;
+      border: 1px solid;
+    }
+    .hero-tag.gold   { color: var(--gold);    border-color: rgba(201,166,62,0.35);  background: rgba(201,166,62,0.06);  }
+    .hero-tag.violet { color: var(--violet);  border-color: rgba(176,158,248,0.35); background: rgba(176,158,248,0.06); }
+    .hero-tag.sky    { color: var(--sky);     border-color: rgba(96,205,228,0.35);  background: rgba(96,205,228,0.06);  }
+    .hero-tag.emerald{ color: var(--emerald); border-color: rgba(45,212,160,0.35);  background: rgba(45,212,160,0.06);  }
+
+    /* ─── Sidebar Nav ────────────────────────────────────────────── */
+    nav {
+      width: 240px;
+      min-width: 240px;
+      background: var(--bg2);
+      border-right: 1px solid var(--border);
+      padding: 32px 0 64px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border3) transparent;
+    }
+    nav::-webkit-scrollbar { width: 4px; }
+    nav::-webkit-scrollbar-track { background: transparent; }
+    nav::-webkit-scrollbar-thumb { background: var(--border3); border-radius: 2px; }
+
+    .nav-brand {
+      padding: 0 22px 24px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 20px;
+    }
+    .nav-brand-name {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--gold);
+      letter-spacing: 0.04em;
+    }
+    .nav-brand-sub {
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 0.65rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .nav-group {
+      margin-bottom: 6px;
+    }
+    .nav-group-label {
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 0.6rem;
+      font-weight: 600;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 14px 22px 5px;
+      display: block;
+    }
+    nav a {
+      display: block;
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 0.775rem;
+      font-weight: 400;
+      color: var(--text2);
+      text-decoration: none;
+      padding: 5px 22px 5px 26px;
+      border-left: 2px solid transparent;
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
+      line-height: 1.4;
+    }
+    nav a:hover {
+      color: var(--text);
+      background: rgba(201,166,62,0.04);
+    }
+    nav a.active {
+      color: var(--gold-bright);
+      border-left-color: var(--gold);
+      background: rgba(201,166,62,0.06);
+      font-weight: 500;
+    }
+    .nav-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 10px 22px;
+    }
+
+    /* ─── Main Content ───────────────────────────────────────────── */
+    main {
+      flex: 1;
+      padding: 56px 64px 120px 64px;
+      max-width: 900px;
+      min-width: 0;
+    }
+
+    /* ─── Section Headings ───────────────────────────────────────── */
+    .section-block {
+      position: relative;
+      margin-top: 80px;
+    }
+    .section-block:first-child { margin-top: 0; }
+
+    h2 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.9rem;
+      font-weight: 500;
+      letter-spacing: -0.01em;
+      color: var(--text);
+      margin-bottom: 6px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border2);
+      line-height: 1.2;
+      position: relative;
+    }
+    h2 .sec-num {
+      font-size: 0.75rem;
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      color: var(--gold);
+      display: block;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+    }
+    /* Ghost number watermark */
+    h2::after {
+      content: attr(data-n);
+      position: absolute;
+      right: 0;
+      top: -16px;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 6.5rem;
+      font-weight: 700;
+      color: rgba(201, 166, 62, 0.035);
+      line-height: 1;
+      letter-spacing: -0.05em;
+      user-select: none;
+      pointer-events: none;
+    }
+
+    h3 {
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--gold-bright);
+      margin: 36px 0 12px;
+    }
+    h3::before {
+      content: '▸ ';
+      color: var(--gold);
+      font-size: 0.75rem;
+    }
+
+    h4 {
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--violet);
+      margin: 24px 0 8px;
+    }
+
+    /* ─── Body text ──────────────────────────────────────────────── */
+    p { margin: 12px 0; color: var(--text); }
+    ul, ol { margin: 12px 0 12px 28px; }
+    li { margin: 6px 0; color: var(--text); }
+    strong { color: var(--amber); font-weight: 600; }
+    em { color: var(--text2); font-style: italic; }
+    a { color: var(--sky); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ─── Code ───────────────────────────────────────────────────── */
+    code {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.8rem;
+      background: var(--code-bg);
+      border: 1px solid var(--border2);
+      border-radius: 3px;
+      padding: 2px 6px;
+      color: var(--emerald);
+    }
+    pre {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.8rem;
+      background: var(--code-bg);
+      border: 1px solid var(--border2);
+      border-left: 3px solid var(--border3);
+      border-radius: 0 6px 6px 0;
+      padding: 18px 22px;
+      overflow-x: auto;
+      margin: 18px 0;
+      line-height: 1.65;
+      color: var(--emerald);
+    }
+
+    /* ─── Math blocks ────────────────────────────────────────────── */
+    .math-block {
+      position: relative;
+      background: linear-gradient(135deg, #0a0b19 0%, #0d0e22 100%);
+      border: 1px solid var(--border2);
+      border-left: 3px solid var(--gold);
+      border-radius: 0 8px 8px 0;
+      padding: 22px 28px 22px 26px;
+      margin: 22px 0;
+      overflow-x: auto;
+      box-shadow: 0 4px 28px rgba(0,0,0,0.5), inset 0 1px 0 rgba(201,166,62,0.04);
+    }
+    .math-block p { margin: 6px 0; }
+
+    .formula-label {
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 0.65rem;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--violet);
+      margin-bottom: 10px;
+      display: inline-block;
+      padding: 3px 8px;
+      background: var(--violet-bg);
+      border-radius: 2px;
+    }
+
+    /* ─── Tables ─────────────────────────────────────────────────── */
+    .table-wrap {
+      overflow-x: auto;
+      margin: 20px 0;
+      border-radius: 6px;
+      border: 1px solid var(--border2);
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      font-size: 0.88rem;
+      font-family: 'IBM Plex Sans', sans-serif;
+    }
+    th {
+      background: var(--surface);
+      color: var(--gold-bright);
+      font-weight: 600;
+      font-size: 0.75rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 11px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--border3);
+      white-space: nowrap;
+    }
+    td {
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+      color: var(--text2);
+      line-height: 1.5;
+    }
+    td strong { color: var(--amber); }
+    tr:last-child td { border-bottom: none; }
+    tr:nth-child(even) td { background: rgba(255,255,255,0.013); }
+    tr:hover td { background: rgba(201,166,62,0.04); }
+
+    /* ─── Info boxes ─────────────────────────────────────────────── */
+    .note, .warning, .key {
+      border-radius: 0 8px 8px 0;
+      padding: 16px 20px;
+      margin: 20px 0;
+      border-left: 3px solid;
+      font-size: 0.92rem;
+    }
+    .note {
+      background: var(--gold-glow);
+      border-color: var(--gold);
+    }
+    .warning {
+      background: var(--crimson-bg);
+      border-color: var(--crimson);
+    }
+    .key {
+      background: var(--emerald-bg);
+      border-color: var(--emerald);
+    }
+    .note p, .warning p, .key p { margin: 4px 0; color: var(--text2); }
+    .note strong    { color: var(--amber); }
+    .warning strong { color: var(--crimson); }
+    .key strong     { color: var(--emerald); }
+    .note ul, .warning ul, .key ul { margin: 8px 0 4px 20px; }
+    .note li, .warning li, .key li { margin: 3px 0; }
+
+    .box-label {
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 0.62rem;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+      display: block;
+    }
+    .note    .box-label { color: var(--gold); }
+    .warning .box-label { color: var(--crimson); }
+    .key     .box-label { color: var(--emerald); }
+
+    /* ─── Pipeline ───────────────────────────────────────────────── */
+    .pipeline {
+      margin: 28px 0;
+      position: relative;
+    }
+    .pipeline::before {
+      content: '';
+      position: absolute;
+      left: 18px;
+      top: 20px;
+      bottom: 20px;
+      width: 1px;
+      background: linear-gradient(180deg, var(--gold), rgba(201,166,62,0.15));
+    }
+    .pipe-step {
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+      padding: 0 0 28px 0;
+      position: relative;
+    }
+    .pipe-step:last-child { padding-bottom: 0; }
+    .pipe-badge {
+      flex-shrink: 0;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--surface2);
+      border: 1px solid var(--gold);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--gold);
+      position: relative;
+      z-index: 1;
+      box-shadow: 0 0 12px rgba(201,166,62,0.15);
+    }
+    .pipe-body {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 6px;
+      padding: 14px 18px;
+      margin-top: 1px;
+    }
+    .pipe-body h4 {
+      margin: 0 0 4px;
+      color: var(--text);
+      font-size: 0.82rem;
+    }
+    .pipe-body p {
+      margin: 0;
+      font-size: 0.875rem;
+      color: var(--muted);
+      font-family: 'IBM Plex Sans', sans-serif;
+    }
+
+    /* ─── Badges ─────────────────────────────────────────────────── */
+    .badge {
+      display: inline-block;
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 0.62rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      padding: 2px 8px;
+      border-radius: 2px;
+      vertical-align: middle;
+      margin-left: 8px;
+      text-transform: uppercase;
+    }
+    .badge-gold    { background: var(--gold-pale);    color: var(--gold-bright); }
+    .badge-emerald { background: var(--emerald-bg);   color: var(--emerald);     }
+    .badge-violet  { background: var(--violet-bg);    color: var(--violet);      }
+    .badge-sky     { background: rgba(96,205,228,0.1); color: var(--sky);        }
+
+    /* ─── Dividers & ornaments ───────────────────────────────────── */
+    .section-rule {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin: 80px 0 0;
+      color: var(--border3);
+    }
+    .section-rule::before,
+    .section-rule::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+    .section-rule span {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 0.85rem;
+      color: var(--gold-dim, #7a6030);
+      letter-spacing: 0.08em;
+    }
+    .rule-light {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 56px 0 0;
+    }
+
+    /* ─── Footer ─────────────────────────────────────────────────── */
+    .doc-footer {
+      margin-top: 80px;
+      padding-top: 28px;
+      border-top: 1px solid var(--border2);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .doc-footer::before {
+      content: '◆';
+      font-size: 0.55rem;
+      color: var(--gold);
+    }
+    .doc-footer p {
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 0.72rem;
+      color: var(--muted);
+      line-height: 1.5;
+      margin: 0;
+    }
+
+    /* ─── Scrollbar ──────────────────────────────────────────────── */
+    ::-webkit-scrollbar       { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border3); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--gold-dim, #7a6030); }
+
+    /* ─── Edge color classes ─────────────────────────────────────── */
+    .pos { color: var(--emerald); }
+    .neg { color: var(--crimson); }
+
+    /* ─── Responsive ─────────────────────────────────────────────── */
+    @media (max-width: 900px) {
+      nav { display: none; }
+      .hero { padding-left: 32px; }
+      main  { padding: 40px 28px 80px; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="progress"></div>
+
+<!-- ─── Hero ─────────────────────────────────────────────────── -->
+<header class="hero">
+  <div class="hero-eyebrow">Mathematical Reference</div>
+  <h1 class="hero-title">PredictionX<br>Pricing Engine &amp; Strategy Agent</h1>
+  <p class="hero-subtitle">From raw futures prices and the Black&nbsp;(1976) binary option formula, through proper-scoring-rule evaluation, to the autonomous agent's OLS-calibrated half-Kelly position sizing.</p>
+  <div class="hero-tags">
+    <span class="hero-tag gold">Black 1976 · Log-Normal</span>
+    <span class="hero-tag violet">OLS Confidence Regression</span>
+    <span class="hero-tag sky">Kalshi · CFTC-Regulated</span>
+    <span class="hero-tag emerald">Half-Kelly Sizing</span>
+  </div>
+</header>
+
+<div class="layout">
+
+<!-- ─── Sidebar ──────────────────────────────────────────────── -->
+<nav id="sidenav">
+  <div class="nav-brand">
+    <div class="nav-brand-name">PredictionX</div>
+    <div class="nav-brand-sub">Math Reference</div>
+  </div>
+
+  <div class="nav-group">
+    <a href="#overview">Overview</a>
+    <a href="#kalshi">Kalshi Binary Contracts</a>
+  </div>
+
+  <div class="nav-divider"></div>
+  <span class="nav-group-label">Data Layer</span>
+  <div class="nav-group">
+    <a href="#futures-strip">Futures Strip</a>
+    <a href="#pyth-spot">Pyth Spot · Gold/Silver</a>
+    <a href="#forward-price">Forward Price</a>
+    <a href="#volatility">Volatility</a>
+  </div>
+
+  <div class="nav-divider"></div>
+  <span class="nav-group-label">Pricing Core</span>
+  <div class="nav-group">
+    <a href="#lognormal">Log-Normal Model</a>
+    <a href="#d2">The d₂ Formula</a>
+    <a href="#time-value">Time-Value Decay</a>
+    <a href="#scenarios">Scenario Analysis</a>
+    <a href="#aggregation">Aggregation</a>
+  </div>
+
+  <div class="nav-divider"></div>
+  <span class="nav-group-label">Regimes</span>
+  <div class="nav-group">
+    <a href="#short-term">Short-Term Mode</a>
+    <a href="#vol-annualisation">Vol Annualisation</a>
+  </div>
+
+  <div class="nav-divider"></div>
+  <div class="nav-group">
+    <a href="#edge">Edge Score</a>
+    <a href="#backtesting">Backtesting &amp; Scoring</a>
+  </div>
+
+  <div class="nav-divider"></div>
+  <span class="nav-group-label">Agent Pipeline</span>
+  <div class="nav-group">
+    <a href="#agent-overview">Agent Overview</a>
+    <a href="#agent-filters">Pre-Signal Filters</a>
+    <a href="#agent-confidence">Confidence Regression</a>
+    <a href="#agent-veto">Signal Classification</a>
+    <a href="#agent-sizing">Position Sizing</a>
+    <a href="#agent-overrides">Segment Overrides</a>
+    <a href="#agent-safety">Safety Guards</a>
+  </div>
+
+  <div class="nav-divider"></div>
+  <div class="nav-group">
+    <a href="#limitations">Limitations</a>
+    <a href="#glossary">Glossary</a>
+  </div>
+</nav>
+
+<!-- ─── Main ──────────────────────────────────────────────────── -->
+<main>
+
+<!-- §1 ──────────────────────────────────────────────────────── -->
+<h2 id="overview" data-n="1"><span class="sec-num">§ 01</span>Overview</h2>
+
+<p>PredictionX prices <strong>binary prediction market contracts</strong> on Kalshi. A Kalshi commodity contract is economically equivalent to a <strong>cash-or-nothing digital option</strong>: it pays $1 if a commodity price exceeds (or falls below) a strike level $K$ on a given settlement date, and $0 otherwise.</p>
+
+<p>The engine computes a fair probability $\hat{p}$ for each contract through a four-stage pipeline:</p>
+
+<div class="pipeline">
+  <div class="pipe-step">
+    <div class="pipe-badge">1</div>
+    <div class="pipe-body">
+      <h4>Data Ingestion</h4>
+      <p>Fetch Kalshi market price (YES and NO independently), build a futures price strip, derive annualised volatility.</p>
+    </div>
+  </div>
+  <div class="pipe-step">
+    <div class="pipe-badge">2</div>
+    <div class="pipe-body">
+      <h4>Distribution Fit → p_base</h4>
+      <p>Fit a log-normal distribution over the futures strip and compute P(price &gt; K) using the d₂ formula.</p>
+    </div>
+  </div>
+  <div class="pipe-step">
+    <div class="pipe-badge">3</div>
+    <div class="pipe-body">
+      <h4>Time-Value Decay → p_tv = fair_value</h4>
+      <p>Model how probability evolves as DTE shrinks — the same formula applied at each intermediate DTE. The point estimate at today's DTE becomes the engine's final fair value.</p>
+    </div>
+  </div>
+  <div class="pipe-step">
+    <div class="pipe-badge">4</div>
+    <div class="pipe-body">
+      <h4>Persist &amp; Backtest</h4>
+      <p>Save the pricing run to SQLite. Once the contract settles, record the outcome and compare predicted vs actual probability using proper scoring rules.</p>
+    </div>
+  </div>
+</div>
+
+<p>The <strong>edge</strong> is then $\text{edge} = \hat{p} - p_{\text{market}}$, where $p_{\text{market}}$ is the independently quoted Kalshi mid-price for the relevant side.</p>
+
+
+<!-- §2 ──────────────────────────────────────────────────────── -->
+<h2 id="kalshi" data-n="2"><span class="sec-num">§ 02</span>Kalshi Binary Contracts</h2>
+
+<p>A Kalshi commodity contract resolves to <strong>YES ($1)</strong> or <strong>NO ($0)</strong> at expiry based on a single condition:</p>
+
+<div class="math-block">
+<div class="formula-label">Payoff — Above Contract</div>
+$$\text{Payoff} = \begin{cases} \$1 & \text{if } S_T > K \\ \$0 & \text{otherwise} \end{cases}$$
+</div>
+
+<div class="math-block">
+<div class="formula-label">Payoff — Below Contract</div>
+$$\text{Payoff} = \begin{cases} \$1 & \text{if } S_T < K \\ \$0 & \text{otherwise} \end{cases}$$
+</div>
+
+<p>where $S_T$ is the underlying commodity spot price at settlement date $T$, and $K$ is the <strong>strike price</strong> parsed from the ticker suffix (e.g. <code>-T80</code> → $K = \$80$).</p>
+
+<p>The <strong>risk-neutral fair value</strong> equals the risk-neutral probability:</p>
+
+<div class="math-block">
+<div class="formula-label">Risk-Neutral Fair Value</div>
+$$\hat{p}_{\text{YES}} = \mathbb{E}^{\mathbb{Q}}\!\left[\mathbf{1}_{S_T > K}\right] = \mathbb{Q}(S_T > K)$$
+$$\hat{p}_{\text{NO}}  = 1 - \hat{p}_{\text{YES}}$$
+</div>
+
+<h3>YES and NO prices are independently quoted</h3>
+
+<p>Kalshi operates a separate orderbook for each side. YES and NO bid/ask are quoted independently by market makers:</p>
+
+<div class="math-block">
+<div class="formula-label">Mid-Price Calculation</div>
+$$p_{\text{YES,mkt}} = \frac{\text{yes\_bid} + \text{yes\_ask}}{2} \qquad p_{\text{NO,mkt}} = \frac{\text{no\_bid} + \text{no\_ask}}{2}$$
+$$p_{\text{YES,mkt}} + p_{\text{NO,mkt}} \neq 1 \quad \text{in general}$$
+</div>
+
+<p>Example on a liquid contract:</p>
+<div class="table-wrap">
+<table>
+  <tr><th></th><th>Bid</th><th>Ask</th><th>Mid</th></tr>
+  <tr><td><strong>YES</strong></td><td>42¢</td><td>44¢</td><td>43¢</td></tr>
+  <tr><td><strong>NO</strong></td><td>57¢</td><td>61¢</td><td>59¢</td></tr>
+  <tr><td><strong>Sum of mids</strong></td><td colspan="3" style="color:var(--amber)"><strong>102¢ ≠ 100¢</strong></td></tr>
+</table>
+</div>
+
+<p>The 2¢ gap is the market-maker's spread collected when YES and NO are sold simultaneously. Buying YES at ask (44¢) and NO at ask (61¢) costs 105¢ &gt; $1 — no arbitrage.</p>
+
+<div class="note">
+  <span class="box-label">Arbitrage-Free Bounds</span>
+  <ul>
+    <li>$\text{yes\_ask} + \text{no\_ask} \geq \$1$ — you cannot buy both sides for less than the $1 payout.</li>
+    <li>$\text{yes\_bid} + \text{no\_bid} \leq \$1$ — you cannot sell both sides for more than $1.</li>
+  </ul>
+  <p>These constraints are enforced by the matching engine and do <em>not</em> force mid-prices to sum to $1.</p>
+</div>
+
+<h3>Edge against the correct side's price</h3>
+
+<div class="math-block">
+<div class="formula-label">Edge Definitions</div>
+$$\text{edge}_{\text{YES}} = \hat{p}_{\text{YES}} - p_{\text{YES,mkt}}$$
+$$\text{edge}_{\text{NO}}  = (1 - \hat{p}_{\text{YES}}) - p_{\text{NO,mkt}}$$
+</div>
+
+<p>Because $p_{\text{YES,mkt}} + p_{\text{NO,mkt}} \neq 1$, YES and NO edges are <em>not</em> equal-and-opposite. A wide-spread contract can show positive edge on both sides simultaneously.</p>
+
+<div class="warning">
+  <span class="box-label">Fallback When NO Prices Are Unavailable</span>
+  <p>If the API omits NO bid/ask, the engine falls back to arb-consistent complements: $\text{no\_bid} = 1 - \text{yes\_ask}$, $\text{no\_ask} = 1 - \text{yes\_bid}$, giving $p_{\text{NO,mkt}} = 1 - p_{\text{YES,mkt}}$. This is noted in the debug log and stored as <code>no_prices_from_api = False</code>.</p>
+</div>
+
+
+<!-- §3 ──────────────────────────────────────────────────────── -->
+<h2 id="futures-strip" data-n="3"><span class="sec-num">§ 03</span>Futures Price Strip</h2>
+
+<p>A <strong>futures strip</strong> is the set of quoted futures prices across all liquid delivery months for a commodity. For WTI crude (root <code>CL</code>):</p>
+
+<div class="table-wrap">
+<table>
+  <tr><th>Delivery Month</th><th>Ticker (yfinance)</th><th>Close Price</th></tr>
+  <tr><td>May 2026</td><td><code>CLK26.NYM</code></td><td>$62.40</td></tr>
+  <tr><td>Jun 2026</td><td><code>CLM26.NYM</code></td><td>$62.10</td></tr>
+  <tr><td>Dec 2026</td><td><code>CLZ26.NYM</code></td><td>$60.80</td></tr>
+</table>
+</div>
+
+<p>Ticker construction follows CME naming conventions: <strong>root + month code + 2-digit year + exchange suffix</strong>.</p>
+
+<div class="table-wrap">
+<table>
+  <tr><th>F</th><th>G</th><th>H</th><th>J</th><th>K</th><th>M</th><th>N</th><th>Q</th><th>U</th><th>V</th><th>X</th><th>Z</th></tr>
+  <tr><td>Jan</td><td>Feb</td><td>Mar</td><td>Apr</td><td>May</td><td>Jun</td><td>Jul</td><td>Aug</td><td>Sep</td><td>Oct</td><td>Nov</td><td>Dec</td></tr>
+</table>
+</div>
+
+<p>Exchange suffixes: <code>.NYM</code> (NYMEX energy/metals), <code>.CMX</code> (COMEX precious metals), <code>.CBT</code> (CBOT grains), <code>.CME</code> (CME livestock/indices/crypto).</p>
+
+
+<!-- §3b ─────────────────────────────────────────────────────── -->
+<h2 id="pyth-spot" data-n="3b"><span class="sec-num">§ 03b</span>Pyth Network Spot Price — Gold &amp; Silver</h2>
+
+<p>Two series — <strong>KXGOLDD</strong> and <strong>KXSILVERD</strong> — settle on a <strong>Pyth Network spot price feed</strong>, not on COMEX futures. Kalshi's specifications for these series reference Pyth's 1-minute candle close for XAU/USD and XAG/USD respectively. Using the COMEX futures price as the anchor for these contracts would be systematically wrong.</p>
+
+<h3>Settlement Kinds</h3>
+
+<div class="table-wrap">
+<table>
+  <tr><th>Series</th><th><code>settlement_kind</code></th><th>Point-Estimate Source</th><th>Vol Source</th></tr>
+  <tr><td>KXWTI, KXBRENTD, KXNATGASD, KXCOPPERD</td><td><code>futures</code></td><td>yfinance strip</td><td>yfinance continuous front-month</td></tr>
+  <tr><td>KXGOLDD</td><td><code>pyth_spot</code></td><td>Pyth XAU/USD (<code>765d2b…</code>)</td><td>yfinance GC=F historical vol</td></tr>
+  <tr><td>KXSILVERD</td><td><code>pyth_spot</code></td><td>Pyth XAG/USD (<code>f2fb02…</code>)</td><td>yfinance SI=F historical vol</td></tr>
+</table>
+</div>
+
+<h3>How the Pyth Anchor Is Applied</h3>
+
+<p>For <code>pyth_spot</code> series, the pricing flow calls <code>data/pyth.py</code> to retrieve the current Pyth spot price and then calls <code>apply_spot_anchor(strip, spot_price)</code>, which replaces the strip's <em>front-month price</em> with the live Pyth spot and returns the adjusted strip plus computed <strong>basis</strong>:</p>
+
+<div class="math-block">
+<div class="formula-label">Spot Anchor Substitution</div>
+$$F_{\text{front}}^{\text{adj}} = S_{\text{Pyth}} \qquad \text{(front-month price replaced)}$$
+$$\text{basis} = F_{\text{front}} - S_{\text{Pyth}} \qquad \text{(stored in distribution\_params)}$$
+</div>
+
+<div class="warning">
+  <span class="box-label">Failure Is Fatal for pyth_spot Series</span>
+  <p>If <code>data/pyth.py</code> raises <code>PythAPIError</code> (HTTP failure, stale publish time, non-positive price), the pricing call raises <code>PricingError</code> — it does <em>not</em> silently fall back to the COMEX futures price. A stale or wrong underlying is worse than no price at all.</p>
+</div>
+
+<h3>Pyth Staleness Guard</h3>
+
+<p>Each price returned by <code>get_spot_price()</code> is validated against its <code>publish_time</code> field. A price whose publish timestamp is more than <strong>180 seconds</strong> behind wall-clock is rejected with <code>PythAPIError</code> — mirroring the yfinance frozen-data guard in <code>data/futures.py</code>.</p>
+
+
+<!-- §4 ──────────────────────────────────────────────────────── -->
+<h2 id="forward-price" data-n="4"><span class="sec-num">§ 04</span>Forward Price Interpolation</h2>
+
+<p>The key input to the pricing formula is the <strong>forward price</strong> $F$ — the expected futures price at the contract's settlement month. If the exact settlement month is in the strip, it is used directly. Otherwise we interpolate in <em>log-price space</em>:</p>
+
+<div class="math-block">
+<div class="formula-label">Log-Price Linear Interpolation</div>
+$$\ln F_T = \ln F_{t_1} + \frac{T - t_1}{t_2 - t_1} \left(\ln F_{t_2} - \ln F_{t_1}\right)$$
+$$F_T = \exp\!\left(\ln F_T\right)$$
+</div>
+
+<p>where $t_1 \le T \le t_2$ are the nearest delivery dates bracketing the settlement date, measured in calendar ordinals. Interpolating in log-price rather than price space preserves positivity and is consistent with the log-normal dynamics. When $T$ is beyond the last strip date, the last price is used (flat extrapolation).</p>
+
+
+<!-- §5 ──────────────────────────────────────────────────────── -->
+<h2 id="volatility" data-n="5"><span class="sec-num">§ 05</span>Volatility Estimation</h2>
+
+<p>Volatility $\sigma$ is the annualised standard deviation of log-returns. Two estimation regimes apply depending on time-to-expiry:</p>
+
+<h3>Long-Term Regime (DTE ≥ 7 Days)</h3>
+
+<p>252 calendar days of daily closing prices are fetched for the <strong>continuous front-month contract</strong> (ticker <code>{root}=F</code>). Log-returns are computed and annualised:</p>
+
+<div class="math-block">
+<div class="formula-label">Daily Realised Volatility</div>
+$$r_i = \ln\!\left(\frac{S_i}{S_{i-1}}\right), \quad i = 1, \ldots, N$$
+$$\sigma_{\text{daily}} = \sqrt{\frac{1}{N-1}\sum_{i=1}^{N}\!\left(r_i - \bar{r}\right)^2}$$
+$$\sigma_{\text{annual}} = \sigma_{\text{daily}} \times \sqrt{252}$$
+</div>
+
+<p>The $\sqrt{252}$ annualisation assumes 252 trading days per year. The engine clips the result to $[0.05,\ 2.00]$ to prevent extreme values from degenerate data.</p>
+
+<h3>Short-Term Regime (DTE &lt; 7 Days)</h3>
+
+<p>For short-dated contracts, 5 days of <strong>hourly</strong> price data are used, with an asset-class-specific annualisation factor:</p>
+
+<div class="math-block">
+<div class="formula-label">Hourly Realised Volatility</div>
+$$\sigma_{\text{hourly}} = \text{std}\!\left(\ln\!\left(\frac{S_t}{S_{t-1}}\right)\right) \quad \text{(over 1h intervals)}$$
+$$\sigma_{\text{annual}} = \sigma_{\text{hourly}} \times \sqrt{H_{\text{year}}}$$
+$$H_{\text{year}} = \begin{cases} 252 \times 17 = 4{,}284 & \text{equity indices (RTH only)} \\ 365 \times 23 = 8{,}395 & \text{commodities, crypto, metals} \end{cases}$$
+</div>
+
+<p>Energy and commodity markets trade nearly around the clock (one maintenance hour excluded). Using asset-class-specific $H_{\text{year}}$ prevents over- or under-stating intraday vol.</p>
+
+
+<!-- §6 ──────────────────────────────────────────────────────── -->
+<h2 id="lognormal" data-n="6"><span class="sec-num">§ 06</span>The Log-Normal Price Model</h2>
+
+<p>The engine models the terminal price $S_T$ as <strong>log-normally distributed</strong> under the risk-neutral measure $\mathbb{Q}$:</p>
+
+<div class="math-block">
+<div class="formula-label">Risk-Neutral Log-Normal Dynamics</div>
+$$S_T = F \cdot \exp\!\left(-\tfrac{1}{2}\sigma_T^2 + \sigma_T Z\right), \quad Z \sim \mathcal{N}(0,1)$$
+</div>
+
+<p>where:</p>
+<ul>
+  <li>$F = F(T)$ is the futures price at the settlement month — the risk-neutral expectation of $S_T$</li>
+  <li>$\sigma_T = \sigma \sqrt{T}$ is the <strong>total volatility</strong> over the remaining time $T$ (in years)</li>
+  <li>The $-\tfrac{1}{2}\sigma_T^2$ term is the Itô correction keeping $\mathbb{E}^{\mathbb{Q}}[S_T] = F$</li>
+</ul>
+
+<div class="math-block">
+<div class="formula-label">Log-Normal Terminal Distribution</div>
+$$\ln S_T \sim \mathcal{N}\!\left(\ln F - \tfrac{1}{2}\sigma_T^2,\ \sigma_T^2\right)$$
+</div>
+
+<p>This is the <strong>Black (1976) futures pricing model</strong> applied to binary options — the industry standard for commodity options and OTC derivatives on futures.</p>
+
+<div class="note">
+  <span class="box-label">Why Use the Futures Price as the Mean?</span>
+  <p>Under $\mathbb{Q}$, the futures price is an unbiased expectation of the future spot price (no risk premium needed). Using $F$ rather than the current spot $S_0$ correctly accounts for the term structure — e.g., oil in backwardation where $F(T) &lt; S_0$.</p>
+</div>
+
+
+<!-- §7 ──────────────────────────────────────────────────────── -->
+<h2 id="d2" data-n="7"><span class="sec-num">§ 07</span>The d₂ Formula — Core Probability Calculation</h2>
+
+<p>Given the log-normal model, the probability that $S_T$ exceeds the strike $K$ has a closed-form solution — the <strong>digital option pricing formula</strong>, derived by integrating the log-normal density above $K$:</p>
+
+<div class="math-block">
+<div class="formula-label">Binary Option Probability — Above</div>
+$$\mathbb{Q}(S_T > K) = N(d_2)$$
+$$d_2 = \frac{\ln\!\left(\dfrac{F}{K}\right) - \dfrac{1}{2}\sigma_T^2}{\sigma_T}$$
+</div>
+
+<div class="math-block">
+<div class="formula-label">Binary Option Probability — Below</div>
+$$\mathbb{Q}(S_T < K) = N(-d_2) = 1 - N(d_2)$$
+</div>
+
+<p>where $N(\cdot)$ is the <strong>standard normal CDF</strong> $N(x) = \int_{-\infty}^{x} \frac{1}{\sqrt{2\pi}} e^{-t^2/2} \, dt$.</p>
+
+<h3>Derivation</h3>
+
+<p>We want $\mathbb{Q}(S_T > K)$. Since $\ln S_T \sim \mathcal{N}(\mu_T, \sigma_T^2)$ with $\mu_T = \ln F - \frac{1}{2}\sigma_T^2$:</p>
+
+<div class="math-block">
+$$\mathbb{Q}(S_T > K) = \mathbb{Q}(\ln S_T > \ln K) = \mathbb{Q}\!\left(\frac{\ln S_T - \mu_T}{\sigma_T} > \frac{\ln K - \mu_T}{\sigma_T}\right)$$
+</div>
+
+<p>Let $Z = (\ln S_T - \mu_T)/\sigma_T \sim \mathcal{N}(0,1)$. Then:</p>
+
+<div class="math-block">
+$$\frac{\ln K - \mu_T}{\sigma_T} = \frac{\ln K - \ln F + \tfrac{1}{2}\sigma_T^2}{\sigma_T} = -d_2$$
+$$\Rightarrow\ \mathbb{Q}(S_T > K) = \mathbb{Q}(Z > -d_2) = N(d_2) \qquad \blacksquare$$
+</div>
+
+<h3>Intuitive Interpretation of d₂</h3>
+
+<div class="table-wrap">
+<table>
+  <tr><th>Scenario</th><th>$d_2$</th><th>$N(d_2)$</th><th>Interpretation</th></tr>
+  <tr><td>Deep ITM: $F \gg K$</td><td>$\to +\infty$</td><td>$\to 1.0$</td><td>Almost certain YES</td></tr>
+  <tr><td>At-the-money: $F = K$</td><td>$\approx -\tfrac{1}{2}\sigma_T$</td><td>$\approx 0.47$–$0.50$</td><td>Slight negative bias from log-normal skew</td></tr>
+  <tr><td>Deep OTM: $F \ll K$</td><td>$\to -\infty$</td><td>$\to 0.0$</td><td>Almost certain NO</td></tr>
+  <tr><td>At expiry: $T \to 0$</td><td>$\to \pm\infty$</td><td>$\to 0$ or $1$</td><td>Deterministic outcome</td></tr>
+</table>
+</div>
+
+<h3>Relationship to Black-Scholes d₁ and d₂</h3>
+
+<p>In standard Black-Scholes for a <em>vanilla call</em>, $d_1 = d_2 + \sigma_T$. The call price is $C = F \cdot N(d_1) - K \cdot N(d_2)$, where $N(d_2)$ is the probability of exercise and $N(d_1)$ is the delta. For our <strong>cash-or-nothing digital</strong>, there is no delivery of the underlying — only $N(d_2)$ matters.</p>
+
+<div class="key">
+  <span class="box-label">Key Insight</span>
+  <p>A Kalshi binary contract is priced using <em>only</em> $N(d_2)$ from Black-Scholes. There is no $d_1$ term because the payoff is a fixed $\$1$, not the underlying price. This makes the formula simpler and less sensitive to model assumptions than vanilla option pricing.</p>
+</div>
+
+<h3>Total Volatility $\sigma_T$</h3>
+
+<div class="math-block">
+<div class="formula-label">Long-Term (DTE in Days)</div>
+$$T = \frac{\tau}{365}, \quad \sigma_T = \sigma_{\text{annual}} \sqrt{T}$$
+</div>
+
+<div class="math-block">
+<div class="formula-label">Short-Term (DTE in Hours, Commodities/Metals)</div>
+$$T = \frac{h}{365 \times 23}, \quad \sigma_T = \sigma_{\text{annual}} \sqrt{T}$$
+</div>
+
+<p>Two floors prevent degenerate $\sigma_T = 0$ at expiry: <strong>long-term mode</strong> floors DTE at 1 day ($\tau_{\min} = 1$); <strong>short-term mode</strong> floors $h$ at 0.25 hours (15 minutes). One exception: the curve endpoint at $\tau = 0$ is computed <em>before</em> any floor, using the deterministic boundary rule $p(0) = \mathbf{1}_{F > K}$, ensuring DTE=0 shows 100%/0% exactly.</p>
+
+
+<!-- §8 ──────────────────────────────────────────────────────── -->
+<h2 id="time-value" data-n="8"><span class="sec-num">§ 08</span>Time-Value Decay Curve</h2>
+
+<p>The distribution fit gives $p_{\text{base}}$ — the probability evaluated at today's DTE. As expiry approaches, the contract's probability drifts toward its final 0 or 1 value. The <strong>time-value decay curve</strong> models this path.</p>
+
+<p>For each DTE $\tau$ from today down to expiry, the engine applies the same log-normal formula with the remaining time:</p>
+
+<div class="math-block">
+<div class="formula-label">Decay Curve Formula</div>
+$$p(\tau) = N\!\left(d_2(\tau)\right), \quad d_2(\tau) = \frac{\ln(F/K) - \tfrac{1}{2}\sigma^2 (\tau/365)}{\sigma \sqrt{\tau/365}}$$
+</div>
+
+<p>At $\tau = 0$, the outcome is deterministic: $p(0) = \mathbf{1}_{F > K}$. The full curve is a list of $(\tau,\ p(\tau))$ pairs.</p>
+
+<h3>Shape of the Curve</h3>
+
+<ul>
+  <li><strong>Deep ITM</strong> ($F \gg K$): $p$ starts high and increases monotonically toward 1.0 — less time for price to fall below $K$.</li>
+  <li><strong>Deep OTM</strong> ($F \ll K$): $p$ starts low and decreases toward 0.0 — less time for a rally to reach $K$.</li>
+  <li><strong>ATM</strong> ($F \approx K$): $p \approx 0.5$ throughout with a gentle final convergence.</li>
+  <li><strong>Near-strike, high vol</strong>: the curve is flatter, with a sharp final convergence as $\sigma_T \to 0$.</li>
+</ul>
+
+<div class="note">
+  <span class="box-label">Simplifying Assumption</span>
+  <p>The forward price is held constant along the curve — the strip is not re-interpolated at each DTE. In practice, as expiry approaches, the relevant forward price shifts toward the prompt-month contract.</p>
+</div>
+
+
+<!-- §9 ──────────────────────────────────────────────────────── -->
+<h2 id="scenarios" data-n="9"><span class="sec-num">§ 09</span>Scenario Analysis (±1σ Shocks)</h2>
+
+<p>Three scenario probabilities are computed by shocking the forward price by ±1 standard deviation of the log-return over the remaining life:</p>
+
+<div class="math-block">
+<div class="formula-label">Vol Shock on Forward Price</div>
+$$F_{\text{bull}} = F \cdot e^{+\sigma_T}, \quad F_{\text{bear}} = F \cdot e^{-\sigma_T}, \quad F_{\text{base}} = F$$
+</div>
+
+<div class="math-block">
+<div class="formula-label">Scenario Probabilities</div>
+$$p_{\text{bull}} = N\!\left(\frac{\ln(F_{\text{bull}}/K) - \tfrac{1}{2}\sigma_T^2}{\sigma_T}\right)$$
+$$p_{\text{base}} = N\!\left(\frac{\ln(F/K) - \tfrac{1}{2}\sigma_T^2}{\sigma_T}\right)$$
+$$p_{\text{bear}} = N\!\left(\frac{\ln(F_{\text{bear}}/K) - \tfrac{1}{2}\sigma_T^2}{\sigma_T}\right)$$
+</div>
+
+<p>Note that $\sigma_T$ in the denominator of $d_2$ is unchanged — we shock the <em>expected price path</em> while keeping residual uncertainty fixed. This gives a spread of outcomes bracketing the base case.</p>
+
+<div class="note">
+  <span class="box-label">Directionality for NO Side</span>
+  <p>For a "below" contract priced on the NO side, bull/bear labels are inverted: a bullish price move hurts the NO side. The terminal report applies this inversion automatically when rendering.</p>
+</div>
+
+
+<!-- §10 ─────────────────────────────────────────────────────── -->
+<h2 id="aggregation" data-n="10"><span class="sec-num">§ 10</span>Aggregation — Final Fair Value</h2>
+
+<div class="math-block">
+<div class="formula-label">Aggregation Pipeline</div>
+$$p_{\text{base}} \xrightarrow{\text{time-value at today's DTE}} p_{\text{tv}} = \hat{p}$$
+</div>
+
+<ol>
+  <li><strong>$p_{\text{base}}$</strong>: log-normal probability from the distribution fit. Anchors the estimate.</li>
+  <li><strong>$p_{\text{tv}}$</strong>: the decay-curve value at today's DTE. Mathematically equivalent to $p_{\text{base}}$ under the same time scaling, but the time-value module also produces the full $\{\tau,\ p(\tau)\}$ curve for visualisation and forward simulation.</li>
+  <li><strong>$\hat{p}$</strong>: the final engine fair value, equal to $p_{\text{tv}}$. If the time-value module fails, the aggregator falls back to $\hat{p} = p_{\text{base}}$.</li>
+</ol>
+
+<p>Scenarios (bull/base/bear) are computed separately using $\pm 1\sigma_T$ forward shocks — see §9. They are reported alongside $\hat{p}$ but do not participate in its definition.</p>
+
+
+<!-- §11 ─────────────────────────────────────────────────────── -->
+<h2 id="short-term" data-n="11"><span class="sec-num">§ 11</span>Short-Term Mode (DTE &lt; 7 Days)</h2>
+
+<p>Contracts expiring within 7 days receive special treatment because:</p>
+<ul>
+  <li>Daily closing-price vol is too coarse — a lot can happen in hours</li>
+  <li>Integer DTE (0 or 1) provides insufficient precision for time scaling $T$</li>
+  <li>Expiry times matter: a contract at 4:00 PM vs 11:59 PM EST is very different at DTE=0</li>
+</ul>
+
+<div class="math-block">
+<div class="formula-label">Short-Term Time Scaling</div>
+$$T = \frac{h}{365 \times 23} \quad \text{where } h = \text{time-to-expiry in hours (fractional)}$$
+$$\sigma_T = \sigma_{\text{annual,hourly}} \times \sqrt{T}$$
+</div>
+
+<p>$h$ is computed from the Kalshi API's <code>close_time</code> field (ISO 8601 UTC) minus current UTC time, giving sub-hour precision. The decay curve in short-term mode shows 8 evenly-spaced hourly points from now to expiry.</p>
+
+
+<!-- §12 ─────────────────────────────────────────────────────── -->
+<h2 id="vol-annualisation" data-n="12"><span class="sec-num">§ 12</span>Volatility Annualisation — Regime Reference</h2>
+
+<div class="table-wrap">
+<table>
+  <tr><th>Asset Class</th><th>DTE Regime</th><th>Data Period</th><th>Interval</th><th>Annualisation</th></tr>
+  <tr><td>All (long-term)</td><td>≥ 7 days</td><td>252 days</td><td>1d</td><td>$\times\sqrt{252}$</td></tr>
+  <tr><td>Energy, Metals, Crypto, Ag</td><td>&lt; 7 days</td><td>5 days</td><td>1h</td><td>$\times\sqrt{365 \times 23}$</td></tr>
+  <tr><td>Equity Indices</td><td>&lt; 7 days</td><td>5 days</td><td>1h</td><td>$\times\sqrt{252 \times 17}$</td></tr>
+</table>
+</div>
+
+<p>The 23h/day assumption accounts for the maintenance window in electronic futures markets (typically 1 hour around 5–6 PM ET). Equity index futures use 17h because extended-hours sessions have much lower liquidity.</p>
+
+
+<!-- §13 ─────────────────────────────────────────────────────── -->
+<h2 id="edge" data-n="13"><span class="sec-num">§ 13</span>Edge Score</h2>
+
+<div class="math-block">
+<div class="formula-label">Edge Definition</div>
+$$\text{edge} = \hat{p} - p_{\text{mkt}}$$
+</div>
+
+<p>The market price $p_{\text{mkt}}$ is always sourced from the Kalshi API mid-price (never entered manually). Interpretation:</p>
+
+<div class="table-wrap">
+<table>
+  <tr><th>Edge</th><th>Signal</th><th>Implication</th></tr>
+  <tr><td class="pos">$> +5\%$</td><td>Strong YES edge</td><td>Market underpricing YES; consider buying YES</td></tr>
+  <tr><td class="pos">$+1\%$ to $+5\%$</td><td>Mild YES edge</td><td>Modest mispricing on YES side</td></tr>
+  <tr><td>$\pm 1\%$</td><td>Fairly priced</td><td>No strong signal</td></tr>
+  <tr><td class="neg">$-1\%$ to $-5\%$</td><td>Mild NO edge</td><td>Market underpricing NO; consider buying NO</td></tr>
+  <tr><td class="neg">$< -5\%$</td><td>Strong NO edge</td><td>Market overpricing YES; strong signal for NO</td></tr>
+</table>
+</div>
+
+<div class="warning">
+  <span class="box-label">Edge Is a Model Output, Not a Guarantee</span>
+  <p>The log-normal model is a simplification. Real commodity prices exhibit jumps, fat tails, and mean-reversion the model does not capture. Positive edge is a signal to investigate, not a mechanical trading rule.</p>
+</div>
+
+
+<!-- §14 ─────────────────────────────────────────────────────── -->
+<h2 id="backtesting" data-n="14"><span class="sec-num">§ 14</span>Backtesting and Model Evaluation</h2>
+
+<p>Once a contract settles, the engine evaluates the prediction using <strong>proper scoring rules</strong> — mathematical measures that reward honest probability estimates and cannot be gamed by reporting extreme probabilities.</p>
+
+<h3>Brier Score</h3>
+
+<div class="math-block">
+<div class="formula-label">Brier Score</div>
+$$\text{BS} = \frac{1}{N} \sum_{i=1}^{N} \left(\hat{p}_i - o_i\right)^2$$
+</div>
+
+<p>where $\hat{p}_i \in [0,1]$ is the model's fair value and $o_i \in \{0, 1\}$ is the actual outcome. Reference values:</p>
+<ul>
+  <li><strong>BS = 0.00</strong>: perfect predictions</li>
+  <li><strong>BS = 0.25</strong>: equivalent to guessing 50% on every contract</li>
+  <li><strong>BS = 1.00</strong>: perfectly wrong on every prediction</li>
+</ul>
+
+<h3>Brier Skill Score (BSS)</h3>
+
+<div class="math-block">
+<div class="formula-label">Brier Skill Score vs. Market</div>
+$$\text{BSS} = 1 - \frac{\text{BS}_{\text{model}}}{\text{BS}_{\text{market}}}$$
+</div>
+
+<p>BSS &gt; 0 means the model beats the market price as a probability estimator. BSS is the primary long-run measure of whether the engine adds value beyond using the market mid as your forecast.</p>
+
+<h3>Calibration</h3>
+
+<p>A model is <strong>well-calibrated</strong> if, across all contracts where it predicted probability $p$, the event actually occurred $p$ fraction of the time. The engine bins predictions into 10pp buckets:</p>
+
+<div class="math-block">
+$$\text{event rate in bucket } b = \frac{\sum_{i \in b} o_i}{\left|b\right|}$$
+</div>
+
+<div class="table-wrap">
+<table>
+  <tr><th>Calibration Pattern</th><th>Diagnosis</th></tr>
+  <tr><td>Event rate consistently above diagonal</td><td>Model <em>underestimates</em> probability (too bearish)</td></tr>
+  <tr><td>Event rate consistently below diagonal</td><td>Model <em>overestimates</em> probability (too bullish)</td></tr>
+  <tr><td>S-shaped: too low at extremes, too high in middle</td><td>Model is over-confident — probabilities too extreme</td></tr>
+  <tr><td>Inverse-S: too high at extremes, too low in middle</td><td>Model is under-confident — probabilities too conservative</td></tr>
+</table>
+</div>
+
+<h3>Mean Absolute Error and Bias</h3>
+
+<div class="math-block">
+<div class="formula-label">MAE and Bias</div>
+$$\text{MAE} = \frac{1}{N}\sum_{i=1}^{N} \left|\hat{p}_i - o_i\right|$$
+$$\text{Bias} = \frac{1}{N}\sum_{i=1}^{N} \left(\hat{p}_i - o_i\right)$$
+</div>
+
+<p>Positive bias means the model systematically overestimates the probability of the event occurring.</p>
+
+<h3>Edge Direction Accuracy</h3>
+
+<div class="math-block">
+<div class="formula-label">Directional Accuracy</div>
+$$\text{edge\_correct}_i = \begin{cases} 1 & \text{if } \text{edge}_i > 0 \text{ and } o_i = 1 \\ 1 & \text{if } \text{edge}_i < 0 \text{ and } o_i = 0 \\ 0 & \text{otherwise} \end{cases}$$
+$$\text{Edge Accuracy} = \frac{1}{N}\sum_{i=1}^N \text{edge\_correct}_i$$
+</div>
+
+<h3>PnL per Dollar Risked</h3>
+
+<div class="math-block">
+<div class="formula-label">Realised PnL per Dollar</div>
+$$\text{PnL} = o - p_{\text{mkt}}$$
+</div>
+
+<p>Averaging this over all runs in an edge bucket gives the realised expected value of acting on that edge signal. Positive average PnL in the high-edge bucket validates the model's alpha.</p>
+
+<div class="key">
+  <span class="box-label">Why Proper Scoring Rules Matter</span>
+  <p>The Brier score is <em>strictly proper</em>: it is minimised in expectation only when the forecast equals the true probability. A model that reports extreme probabilities to artificially improve its score will actually <em>increase</em> its Brier score. BSS improvement is genuinely signal, not an artefact of reporting strategy.</p>
+</div>
+
+
+<!-- §15 ─────────────────────────────────────────────────────── -->
+<h2 id="agent-overview" data-n="15"><span class="sec-num">§ 15</span>Agent Pipeline Overview</h2>
+
+<p>The autonomous strategy agent runs a continuous scan-price-signal-size-record loop, evaluating all open Kalshi contracts and recording sizing decisions in <strong>shadow mode</strong> by default. Every decision is persisted to the <code>strategy_decisions</code> table with full provenance so the loop can be evaluated like a live trading system.</p>
+
+<div class="pipeline">
+  <div class="pipe-step">
+    <div class="pipe-badge">1</div>
+    <div class="pipe-body">
+      <h4>Scan</h4>
+      <p>List all open Kalshi contracts across every configured series via the public API.</p>
+    </div>
+  </div>
+  <div class="pipe-step">
+    <div class="pipe-badge">2</div>
+    <div class="pipe-body">
+      <h4>Filter</h4>
+      <p>Apply six lightweight pre-pricing checks: priceable series, deduplication, volume, mid-price range, TTX/DTE window, and spread quality.</p>
+    </div>
+  </div>
+  <div class="pipe-step">
+    <div class="pipe-badge">3</div>
+    <div class="pipe-body">
+      <h4>Price</h4>
+      <p>Run the full pricing engine for each contract that passes filters → <strong>raw_edge</strong> = fair_value − market_price.</p>
+    </div>
+  </div>
+  <div class="pipe-step">
+    <div class="pipe-badge">4</div>
+    <div class="pipe-body">
+      <h4>Confidence Regression</h4>
+      <p>Look up OLS coefficients (α, β) from historical resolved runs for this segment → <strong>adjusted_edge</strong> = α + β × raw_edge.</p>
+    </div>
+  </div>
+  <div class="pipe-step">
+    <div class="pipe-badge">5</div>
+    <div class="pipe-body">
+      <h4>Classify</h4>
+      <p>Compare adjusted_edge to threshold θ: <strong>watch</strong> (below θ), <strong>auto-buy</strong> ([θ, 2θ)), or <strong>clear-buy</strong> (≥ 2θ). No per-cycle LLM call.</p>
+    </div>
+  </div>
+  <div class="pipe-step">
+    <div class="pipe-badge">6</div>
+    <div class="pipe-body">
+      <h4>Size</h4>
+      <p>Compute position size under two parallel strategies: fractional Kelly and Fixed dollar amount.</p>
+    </div>
+  </div>
+  <div class="pipe-step">
+    <div class="pipe-badge">7</div>
+    <div class="pipe-body">
+      <h4>Record</h4>
+      <p>Write the decision to <code>strategy_decisions</code>. Update the bankroll curve. After contract settlement, auto-resolve and compute PnL.</p>
+    </div>
+  </div>
+</div>
+
+<div class="note">
+  <span class="box-label">Shadow Mode</span>
+  <p><code>kelly_action</code> and <code>fixed_action</code> are written to the database as if trades were placed, but no order is submitted to Kalshi. The agent simulates a live portfolio using mark-to-market PnL computed at settlement. Live mode is enabled by <code>--live</code> or <code>AGENT_LIVE_MODE=true</code>.</p>
+</div>
+
+
+<!-- §16 ─────────────────────────────────────────────────────── -->
+<h2 id="agent-filters" data-n="16"><span class="sec-num">§ 16</span>Pre-Signal Filters</h2>
+
+<p>Six filters are applied before any pricing or database lookup — ordered cheapest to most expensive. The first failing check short-circuits evaluation.</p>
+
+<div class="table-wrap">
+<table>
+  <tr><th>#</th><th>Filter</th><th>Default Threshold</th><th>Reason</th></tr>
+  <tr><td>1</td><td>Priceable series</td><td><code>futures_root ≠ ""</code></td><td>Series must map to a futures root; unknown series skipped entirely.</td></tr>
+  <tr><td>2</td><td>Deduplication</td><td>Not in <code>v_open_positions</code></td><td>Avoid accumulating duplicate positions in the same contract.</td></tr>
+  <tr><td>3</td><td>Minimum volume</td><td>500 contracts</td><td>Illiquid contracts have wide spreads and unreliable mid-prices.</td></tr>
+  <tr><td>4</td><td>Mid-price range</td><td>5% – 95%</td><td>Deep OTM/ITM contracts are near-resolved; edge signal is noisy.</td></tr>
+  <tr><td>5</td><td>TTX / DTE window</td><td>2h – 26h (short) or 1d – 14d (medium)</td><td>Avoid contracts too close (no time to act) or too far (vol estimates unreliable).</td></tr>
+  <tr><td>6</td><td>Spread quality</td><td>yes_spread / yes_mid ≤ 8%</td><td>Wide bid/ask makes the mid-price an unreliable proxy for fair value.</td></tr>
+</table>
+</div>
+
+<h3>TTX Regime Split</h3>
+
+<p>A contract is classified as <strong>short-term</strong> if <code>dte_hours ≤ 26</code> (approximately one trading day). Short-term contracts use hourly volatility and TTX buckets. Medium-term contracts use daily DTE and daily vol. The agent applies separate TTX/DTE range filters for each regime.</p>
+
+
+<!-- §17 ─────────────────────────────────────────────────────── -->
+<h2 id="agent-confidence" data-n="17"><span class="sec-num">§ 17</span>Confidence Regression and Adjusted Edge</h2>
+
+<p>A raw-edge threshold alone ignores whether the pricing model's edge estimates are systematically over- or under-stated in specific market segments. The agent estimates a <strong>linear regression</strong> from historical raw_edge to realised PnL per dollar risked, fitting two coefficients that capture bias and calibration quality independently.</p>
+
+<h3>Training Data</h3>
+
+<div class="math-block">
+<div class="formula-label">YES Side</div>
+$$x_i = \hat{p}_i - p_{\text{YES,mkt},i} \quad \text{(raw YES edge)}$$
+$$y_i = o_i - p_{\text{YES,mkt},i} \quad \text{(realised PnL per dollar risked)}$$
+</div>
+
+<div class="math-block">
+<div class="formula-label">NO Side</div>
+$$x_i = (1 - \hat{p}_i) - p_{\text{NO,mkt},i} \quad \text{(raw NO edge)}$$
+$$y_i = (1 - o_i) - p_{\text{NO,mkt},i} \quad \text{(realised PnL per dollar risked on NO)}$$
+</div>
+
+<h3>OLS Regression</h3>
+
+<div class="math-block">
+<div class="formula-label">Ordinary Least Squares</div>
+$$y = \alpha + \beta \, x + \varepsilon$$
+$$\hat{\alpha},\ \hat{\beta} = \underset{\alpha, \beta}{\arg\min} \sum_{i=1}^{N} \left(y_i - \alpha - \beta\, x_i\right)^2$$
+</div>
+
+<p>Interpreting the coefficients:</p>
+<ul>
+  <li><strong>$\alpha$ (intercept — bias):</strong> expected PnL when raw_edge = 0. If $\alpha < 0$, the model loses on zero-edge trades — systematic overconfidence or adverse selection.</li>
+  <li><strong>$\beta$ (slope — calibration):</strong> additional realised PnL per unit of raw_edge. $\beta = 1$ means raw edge is perfectly predictive; $\beta < 1$ means edges are overstated; $\beta > 1$ means the model is conservative.</li>
+</ul>
+
+<h3>Adjusted Edge Formula</h3>
+
+<div class="math-block">
+<div class="formula-label">Adjusted Edge</div>
+$$\text{adjusted\_edge} = \hat{\alpha} + \hat{\beta} \cdot \text{raw\_edge}$$
+</div>
+
+<h3>Fallback Prior</h3>
+
+<p>When fewer than <code>min_samples</code> (default 50) resolved runs exist for a segment, the agent falls back to a <strong>conservative neutral prior</strong>:</p>
+
+<div class="math-block">
+$$\hat{\alpha} = 0.0,\quad \hat{\beta} = 0.5 \quad \Rightarrow \quad \text{adjusted\_edge} = 0.5 \times \text{raw\_edge}$$
+</div>
+
+<h3>Confidence Hierarchy</h3>
+
+<div class="table-wrap">
+<table>
+  <tr><th>Level</th><th>Segment</th><th>Example Label</th></tr>
+  <tr><td>1 — Most specific</td><td>Series + direction + TTX/DTE bucket</td><td><code>KXGOLDD/above/4-8h</code></td></tr>
+  <tr><td>2</td><td>Series + TTX/DTE bucket (any direction)</td><td><code>KXGOLDD/4-8h</code></td></tr>
+  <tr><td>3</td><td>Global + TTX/DTE bucket (all series)</td><td><code>global/4-8h</code></td></tr>
+  <tr><td>4 — Fallback</td><td>Global average (all segments)</td><td><code>global_average</code></td></tr>
+</table>
+</div>
+
+<p>TTX buckets for short-term: &lt;2h, 2–4h, 4–8h, 8–16h, 16–26h. DTE buckets for medium-term: 1d, 2–3d, 4–7d, 8–14d.</p>
+
+
+<!-- §18 ─────────────────────────────────────────────────────── -->
+<h2 id="agent-veto" data-n="18"><span class="sec-num">§ 18</span>Signal Classification</h2>
+
+<p>Two thresholds govern classification:</p>
+<ul>
+  <li><strong>$\theta$</strong> — the <em>segment-overridden</em> minimum adjusted edge. Starts at <code>min_adjusted_edge</code> (default 0.072) and may be raised/lowered by a <code>min_edge_override</code>. Used for the watch/buy boundary.</li>
+  <li><strong>$\theta_0$</strong> — the <em>global, unoverridden</em> <code>config.min_adjusted_edge</code> (default 0.072). Used <em>exclusively</em> for the auto-buy/clear-buy boundary at $2\theta_0$. Segment overrides never move this line.</li>
+</ul>
+
+<div class="table-wrap">
+<table>
+  <tr><th>Tier</th><th>Condition</th><th>Recorded Action</th></tr>
+  <tr><td><strong>Watch</strong></td><td>$\text{adjusted\_edge} < \theta$</td><td><code>watch</code> — zero size, DB row written for analysis</td></tr>
+  <tr><td><strong>Auto-Buy</strong></td><td>$\theta \le \text{adjusted\_edge} < 2\theta_0$</td><td><code>buy</code> — rule-based, proceeds immediately to sizing</td></tr>
+  <tr><td><strong>Clear-Buy</strong></td><td>$\text{adjusted\_edge} \ge 2\theta_0$</td><td><code>buy</code> — same execution as auto-buy; label preserved in analytics for high-confidence tracking</td></tr>
+</table>
+</div>
+
+<div class="warning">
+  <span class="box-label">Sanity Gate — Implausible Edge</span>
+  <p>Before any buy proceeds to sizing, <code>raw_edge</code> is checked against <code>max_raw_edge_sanity</code> (default 0.25). If <code>raw_edge ≥ 0.25</code>, the classification is forced to <code>watch</code> with skip reason <code>raw_edge_implausible:&lt;value&gt;</code>. Sane liquid markets do not leave 25 percentage points on the table; a reading this extreme almost certainly signals a stale forward price or input error.</p>
+</div>
+
+<div class="note">
+  <span class="box-label">Why Keep the Clear-Buy Label?</span>
+  <p>Separating clear-buy from auto-buy in the DB enables the periodic review to analyse whether the model's highest-confidence signals outperform relative to the auto-buy tier — without requiring a per-cycle LLM call to generate the distinction.</p>
+</div>
+
+<h3>LLM Observability (Startup Preflight)</h3>
+
+<div class="table-wrap">
+<table>
+  <tr><th>Status</th><th>Condition</th></tr>
+  <tr><td><code>ok</code></td><td>API key present — periodic review LLM will be available</td></tr>
+  <tr><td><code>error</code></td><td>Key missing — periodic review runs rule-based findings only, no Claude synthesis</td></tr>
+</table>
+</div>
+
+
+<!-- §19 ─────────────────────────────────────────────────────── -->
+<h2 id="agent-sizing" data-n="19"><span class="sec-num">§ 19</span>Position Sizing</h2>
+
+<h3>Kelly Criterion for Binary Contracts</h3>
+
+<p>A Kalshi YES contract bought at price $p_{\text{mkt}}$ has payoff structure: win (probability $\hat{p}$) profit = $1 - p_{\text{mkt}}$; lose (probability $1 - \hat{p}$) loss = $p_{\text{mkt}}$. The Kelly fraction maximises expected log-wealth growth. For net odds $b = (1 - p_{\text{mkt}}) / p_{\text{mkt}}$:</p>
+
+<div class="math-block">
+<div class="formula-label">Kelly Fraction — Binary Contract</div>
+$$f^* = \frac{\hat{p} \cdot b - (1 - \hat{p})}{b} = \frac{\hat{p} - p_{\text{mkt}}}{1 - p_{\text{mkt}}} = \frac{\text{edge}}{1 - p_{\text{mkt}}}$$
+</div>
+
+<p>A <strong>half-Kelly multiplier</strong> $\lambda = 0.5$ and a <strong>hard cap</strong> $f_{\text{max}}$ (default 10% of bankroll) reduce variance and ruin risk:</p>
+
+<div class="math-block">
+<div class="formula-label">Final Kelly Fraction and Size</div>
+$$f_{\text{adj}} = \lambda \cdot f^* = \frac{\lambda \cdot \text{edge}}{1 - p_{\text{mkt}}}$$
+$$f_{\text{final}} = \min\!\left(f_{\text{adj}},\ f_{\text{max}}\right)$$
+$$\text{size}_{\text{USD}} = f_{\text{final}} \times W_{\text{avail}}$$
+</div>
+
+<h3>Cash-on-Hand Sizing and EV-Ranked Allocation</h3>
+
+<div class="math-block">
+<div class="formula-label">Available Kelly Bankroll</div>
+$$W_{\text{avail}} = \max\!\left(0,\ W_{\text{snapshot}} - \sum_{i \in \text{open}} \text{size}_{\text{USD},i}\right)$$
+</div>
+
+<p>Within a single cycle, candidates are funded in <strong>decreasing order of $f^*$</strong>. After each buy, $W_{\text{avail}}$ is decremented before the next candidate is sized:</p>
+
+<div class="math-block">
+<div class="formula-label">Within-Cycle Priority</div>
+$$\text{priority}(c) = \frac{\text{adjusted\_edge}_c}{1 - p_{\text{mkt},c}}, \quad p_{\text{mkt},c} < 1$$
+$$W_{\text{avail}}^{(k+1)} = \max\!\left(0,\ W_{\text{avail}}^{(k)} - \text{size}_{\text{USD},c_k}\right)$$
+</div>
+
+<div class="note">
+  <span class="box-label">Why Half-Kelly?</span>
+  <p>Full Kelly maximises long-run growth but produces extreme drawdowns and is highly sensitive to model error. Half-Kelly gives approximately 75% of the growth rate with much lower variance, and is standard practice for strategies with uncertain probability estimates.</p>
+</div>
+
+<h3>Fixed Strategy</h3>
+
+<div class="math-block">
+<div class="formula-label">Fixed Position Size</div>
+$$\text{size}_{\text{USD}} = \begin{cases} A & \text{if } \text{adjusted\_edge} \ge \theta \\ 0 & \text{otherwise} \end{cases}$$
+</div>
+
+<p>where $A$ is a constant dollar amount (default $50) and $\theta$ is the same segment-overridden threshold used for Kelly classification. Fixed is a benchmark: lower variance than Kelly but does not scale with edge conviction.</p>
+
+<div class="note">
+  <span class="box-label">Fixed Never Trades Live</span>
+  <p>Fixed is a permanent shadow benchmark — it records decisions exactly as Kelly does, but no real Kalshi order is ever placed on behalf of the Fixed strategy.</p>
+</div>
+
+<h3>Bankroll Tracking</h3>
+
+<div class="math-block">
+<div class="formula-label">Bankroll Update</div>
+$$W_{t+1} = W_t + \sum_{\text{resolved at }t} \text{PnL}_i$$
+$$\text{PnL}_i = \text{size}_{\text{USD},i} \times \frac{o_i - p_{\text{mkt},i}}{p_{\text{mkt},i}}$$
+</div>
+
+<p>This is the dollar profit from buying <code>size_USD</code> worth of contracts at $p_{\text{mkt}}$: each dollar spent buys $1/p_{\text{mkt}}$ contracts, each paying $1 or $0 at settlement. Snapshots are append-only and never amended.</p>
+
+
+<!-- §20 ─────────────────────────────────────────────────────── -->
+<h2 id="agent-overrides" data-n="20"><span class="sec-num">§ 20</span>Segment Overrides and Periodic Review</h2>
+
+<p>The agent runs a <strong>periodic review</strong> at most daily, or when <code>review_sample_threshold</code> (default 50) new resolutions have accumulated since the last review. The review identifies market segments where the confidence regression is systematically wrong and applies <strong>segment overrides</strong> that take effect immediately — no restart required.</p>
+
+<h3>Review Process</h3>
+
+<ol>
+  <li>Load analytics views (<code>v_by_ttx_bucket</code>, <code>v_by_dte_bucket</code>, <code>v_by_moneyness</code>, <code>v_strategy_comparison</code>, etc.)</li>
+  <li>Flag segments with <code>n ≥ review_min_segment_n</code> (default 30) and edge accuracy below 0.45 or above 0.65.</li>
+  <li>Call <code>claude-sonnet-4-6</code> with tool use — the LLM can query allowed analytics views, inspect bankroll curves, and retrieve prior overrides.</li>
+  <li>LLM returns override recommendations as structured JSON.</li>
+  <li>Overrides are written to <code>segment_overrides</code> and take effect on the next agent cycle.</li>
+</ol>
+
+<h3>Override Types</h3>
+
+<div class="table-wrap">
+<table>
+  <tr><th>Type</th><th>Effect on Regression Coefficients</th></tr>
+  <tr>
+    <td><code>confidence_multiplier</code></td>
+    <td>$\hat{\beta}' = v \cdot \hat{\beta}$, $\hat{\alpha}$ unchanged. Use $v < 1$ to dampen over-trading; $v > 1$ to boost a reliably undervalued segment.</td>
+  </tr>
+  <tr>
+    <td><code>exclude</code></td>
+    <td>$\hat{\alpha}' = 0,\ \hat{\beta}' = 0\ \Rightarrow\ \text{adjusted\_edge} = 0$. Segment always produces watch/skip regardless of raw edge. Used for persistently negative realised PnL.</td>
+  </tr>
+  <tr>
+    <td><code>min_edge_override</code></td>
+    <td>Replaces <code>min_adjusted_edge</code> ($\theta$) for the specific segment. Raises the bar for low-quality segments or lowers it for highly reliable ones.</td>
+  </tr>
+</table>
+</div>
+
+<div class="note">
+  <span class="box-label">Override Preservation</span>
+  <p>The periodic review only deactivates prior permanent overrides when the LLM produces ≥1 valid replacement. A silent review never wipes the active override set — this fixed a live-trading incident where a review wiped a KXWTI exclude 47 seconds before 7 fresh KXWTI buys.</p>
+</div>
+
+
+<!-- §21 ─────────────────────────────────────────────────────── -->
+<h2 id="agent-safety" data-n="21"><span class="sec-num">§ 21</span>Live-Mode Safety Guards</h2>
+
+<p>The live execution path applies a layered set of safety checks introduced after Day-1 of live trading exposed several failure modes. All guards are evaluated in order; the first failing guard determines the skip reason.</p>
+
+<h3>Data-Quality Guards (Before Pricing)</h3>
+
+<div class="table-wrap">
+<table>
+  <tr><th>Guard</th><th>Threshold</th><th>Failure Action</th></tr>
+  <tr><td><strong>Stale daily data</strong></td><td>Last bar older than 96h</td><td>Raise <code>FuturesDataError</code></td></tr>
+  <tr><td><strong>Stale hourly data</strong></td><td>Last bar older than 6h</td><td>Raise <code>FuturesDataError</code></td></tr>
+  <tr><td><strong>Frozen futures price</strong></td><td>Price identical (|Δ| &lt; 1e-4) for ≥5 consecutive hourly readings over 6h</td><td>Raise <code>FuturesDataError</code></td></tr>
+  <tr><td><strong>Stale Pyth feed</strong></td><td><code>publish_time</code> more than 180s behind wall-clock</td><td>Raise <code>PythAPIError</code></td></tr>
+</table>
+</div>
+
+<h3>Per-Order Live Guards (Before Placing a Kalshi Order)</h3>
+
+<p>These guards evaluate against a <strong>per-cycle running state</strong> (<code>_LiveCycleState</code>) so two candidates within the same cycle cannot collectively breach a cap that each one would pass individually.</p>
+
+<div class="table-wrap">
+<table>
+  <tr><th>Guard</th><th>Condition Checked</th><th>Skip Reason</th></tr>
+  <tr><td><strong>No quoted ask</strong></td><td><code>ask ≤ 0</code> for the evaluated side</td><td><code>no_ask</code></td></tr>
+  <tr><td><strong>Insufficient live cash</strong></td><td>Order cost (<code>count × ask</code>) exceeds running working cash</td><td><code>insufficient_live_cash:&lt;avail&gt;&lt;&lt;cost&gt;</code></td></tr>
+  <tr><td><strong>Directional asymmetry</strong></td><td>(series, direction) already has ≥ <code>max_same_direction_buys_per_cycle</code> (default 3) buys</td><td><code>directional_asymmetry:…</code></td></tr>
+  <tr><td><strong>Per-series exposure cap</strong></td><td>Post-trade series exposure / account value &gt; 20%</td><td><code>series_exposure_cap:…</code></td></tr>
+  <tr><td><strong>Portfolio exposure cap</strong></td><td>Post-trade total open exposure / account value &gt; 40%</td><td><code>portfolio_exposure_cap:…</code></td></tr>
+</table>
+</div>
+
+<div class="math-block">
+<div class="formula-label">Account Value and Exposure Definitions</div>
+$$\text{total\_account\_value} = \text{Kalshi\_cash\_balance} + \text{open\_position\_cost}$$
+$$\text{series\_frac} = \frac{\text{series\_exposure}[\text{series}] + \text{order\_cost}}{\text{total\_account\_value}}$$
+$$\text{portfolio\_frac} = \frac{\text{running\_exposure} + \text{order\_cost}}{\text{total\_account\_value}}$$
+</div>
+
+<div class="note">
+  <span class="box-label">Phantom-Exposure Guard</span>
+  <p>Open exposure is computed only for rows where <code>order_status IN ('pending', 'filled') AND kalshi_order_id IS NOT NULL</code>. Rows where placement crashed or the order was cancelled are excluded, preventing a failed placement from leaving phantom exposure that would artificially inflate position caps.</p>
+</div>
+
+<div class="warning">
+  <span class="box-label">Order Type Restriction</span>
+  <p>All live orders are <strong>limit only</strong>, price clamped 1–99¢. Market orders are not supported by design: a stale or buggy signal produces an unfilled resting order rather than sweeping the book at an adverse price.</p>
+</div>
+
+
+<!-- §22 ─────────────────────────────────────────────────────── -->
+<h2 id="limitations" data-n="22"><span class="sec-num">§ 22</span>Model Limitations and Assumptions</h2>
+
+<h3>Log-Normal Dynamics</h3>
+<p>The model assumes continuous log-normal price paths. Real commodity prices exhibit:</p>
+<ul>
+  <li><strong>Jump risk</strong>: sudden gap moves from OPEC announcements, weather events, geopolitical shocks</li>
+  <li><strong>Fat tails</strong>: extreme moves occur more frequently than the normal distribution predicts</li>
+  <li><strong>Mean reversion</strong>: energy prices tend to revert to long-run equilibrium cost of production</li>
+</ul>
+
+<h3>Constant Forward Price</h3>
+<p>The forward price $F$ is interpolated from today's futures strip and held constant throughout the decay curve. In practice, $F$ shifts as new information arrives.</p>
+
+<h3>Constant Volatility</h3>
+<p>A single annualised $\sigma$ is used throughout the remaining contract life. Real markets exhibit a volatility <em>term structure</em> and a <em>volatility smile</em>. The engine uses a single number — adequate for ballpark fair-value estimation, not for precision near-the-money pricing.</p>
+
+<h3>Risk-Neutral vs. Real-World Measure</h3>
+<p>The engine operates under $\mathbb{Q}$, using the futures price as the expected terminal value. Risk premiums (e.g., the crude oil risk premium embedded in backwardation) are implicitly absorbed into the futures price but not separately modelled.</p>
+
+<h3>Short-Term Forward Price Accuracy</h3>
+<p>For very short-dated contracts, the front-month futures price is a reasonable proxy for the eventual settlement price, but intraday basis can be significant. A more precise implementation would use the specific expiry-month contract's last traded price.</p>
+
+
+<!-- §23 ─────────────────────────────────────────────────────── -->
+<h2 id="glossary" data-n="23"><span class="sec-num">§ 23</span>Glossary</h2>
+
+<div class="table-wrap">
+<table>
+  <tr><th>Term</th><th>Definition</th></tr>
+  <tr><td><strong>$F$</strong></td><td>Forward price — futures price interpolated to the settlement month</td></tr>
+  <tr><td><strong>$K$</strong></td><td>Strike price — target price level in the Kalshi contract (e.g. $80)</td></tr>
+  <tr><td><strong>$\sigma$</strong></td><td>Annualised volatility of log-returns</td></tr>
+  <tr><td><strong>$\sigma_T$</strong></td><td>Total volatility over remaining life: $\sigma\sqrt{T}$</td></tr>
+  <tr><td><strong>$T$</strong></td><td>Time to expiry in years: $\tau/365$ (long-term) or $h/(365 \times 23)$ (short-term)</td></tr>
+  <tr><td><strong>$d_2$</strong></td><td>Standardised distance from strike: $(\ln(F/K) - \tfrac{1}{2}\sigma_T^2)/\sigma_T$</td></tr>
+  <tr><td><strong>$N(\cdot)$</strong></td><td>Standard normal CDF</td></tr>
+  <tr><td><strong>$p_{\text{base}}$</strong></td><td>Log-normal probability from the distribution fit</td></tr>
+  <tr><td><strong>$p_{\text{tv}}$</strong></td><td>Time-value point estimate (same formula at today's DTE)</td></tr>
+  <tr><td><strong>$\hat{p}$</strong></td><td>Final YES fair value — the engine's $P(\text{target met})$, equal to $p_{\text{tv}}$</td></tr>
+  <tr><td><strong>$p_{\text{YES,mkt}}$</strong></td><td>YES mid-price from Kalshi: (yes_bid + yes_ask) / 2</td></tr>
+  <tr><td><strong>$p_{\text{NO,mkt}}$</strong></td><td>NO mid-price from Kalshi: (no_bid + no_ask) / 2 — independently quoted, not 1 − YES mid</td></tr>
+  <tr><td><strong>edge</strong></td><td>$\hat{p} - p_{\text{YES,mkt}}$ for YES; $(1-\hat{p}) - p_{\text{NO,mkt}}$ for NO</td></tr>
+  <tr><td><strong>DTE</strong></td><td>Days to expiry (whole calendar days)</td></tr>
+  <tr><td><strong>TTX</strong></td><td>Time to expiry in hours/minutes (short-term display)</td></tr>
+  <tr><td><strong>ITM</strong></td><td>In-the-money: $F > K$ for an "above" contract</td></tr>
+  <tr><td><strong>OTM</strong></td><td>Out-of-the-money: $F < K$ for an "above" contract</td></tr>
+  <tr><td><strong>ATM</strong></td><td>At-the-money: $F \approx K$</td></tr>
+  <tr><td><strong>$\mathbb{Q}$</strong></td><td>Risk-neutral probability measure; futures price = $\mathbb{E}^{\mathbb{Q}}[S_T]$</td></tr>
+  <tr><td><strong>Futures strip</strong></td><td>Set of futures prices across all liquid delivery months</td></tr>
+  <tr><td><strong>Log-normal</strong></td><td>Distribution where $\ln X \sim \mathcal{N}(\mu, \sigma^2)$; guarantees $X > 0$</td></tr>
+  <tr><td><strong>Cash-or-nothing digital</strong></td><td>Option paying a fixed cash amount if underlying exceeds strike; equivalent to a Kalshi YES payout</td></tr>
+  <tr><td><strong>Brier Score (BS)</strong></td><td>Mean squared error of probability forecasts vs. binary outcomes; range [0, 1], lower is better</td></tr>
+  <tr><td><strong>Brier Skill Score (BSS)</strong></td><td>$1 - \text{BS}_\text{model}/\text{BS}_\text{market}$; positive means model beats market price as a probability estimate</td></tr>
+  <tr><td><strong>Calibration</strong></td><td>When the model says $p\%$, the event occurs $p\%$ of the time across many predictions</td></tr>
+  <tr><td><strong>MAE</strong></td><td>Mean absolute error: average $|\hat{p} - o|$ across resolved contracts</td></tr>
+  <tr><td><strong>Bias</strong></td><td>Mean signed error $(\hat{p} - o)$; positive = model over-estimates probability</td></tr>
+  <tr><td><strong>Edge accuracy</strong></td><td>Fraction of runs where edge direction matched the actual outcome</td></tr>
+  <tr><td><strong>raw_edge</strong></td><td>Unadjusted edge signal directly from the pricing engine</td></tr>
+  <tr><td><strong>adjusted_edge</strong></td><td>$\alpha + \beta \cdot \text{raw\_edge}$ — scaled by OLS regression coefficients</td></tr>
+  <tr><td><strong>$\alpha$ (intercept)</strong></td><td>Expected realised PnL when raw_edge = 0; captures systematic model bias</td></tr>
+  <tr><td><strong>$\beta$ (slope)</strong></td><td>Additional realised PnL per unit of raw_edge; $\beta=1$ = perfectly calibrated</td></tr>
+  <tr><td><strong>pyth_spot</strong></td><td>Settlement kind for KXGOLDD/KXSILVERD: settles on Pyth Network XAU/USD or XAG/USD, not COMEX futures</td></tr>
+  <tr><td><strong>spot_basis</strong></td><td>Pyth spot − futures front-month price, stored in <code>distribution_params</code> for pyth_spot series</td></tr>
+  <tr><td><strong>$\theta_0$ (global threshold)</strong></td><td>Unoverridden <code>config.min_adjusted_edge</code> (default 0.072); the auto-buy/clear-buy split at $2\theta_0$</td></tr>
+  <tr><td><strong>Shadow mode</strong></td><td>Agent mode where decisions are logged as if trades were placed but no order is submitted to Kalshi</td></tr>
+  <tr><td><strong>Kelly fraction</strong></td><td>Optimal bet size as fraction of bankroll: $f^* = \text{edge}/(1-p_{\text{mkt}})$; half-Kelly ($\lambda=0.5$) used in practice</td></tr>
+  <tr><td><strong>Segment override</strong></td><td>Per-segment adjustment to α, β, or θ written by periodic review; takes effect next cycle</td></tr>
+  <tr><td><strong>Clear-buy</strong></td><td>Contract classified at adjusted_edge ≥ 2θ; same execution as auto-buy, label preserved in analytics</td></tr>
+  <tr><td><strong>TTX bucket</strong></td><td>Time-to-expiry range bucket for short-term contracts (&lt;26h): e.g. "4-8h"</td></tr>
+</table>
+</div>
+
+<div class="doc-footer">
+  <p>
+    PredictionX · Pricing Engine &amp; Strategy Agent · Mathematical Reference<br>
+    Model: Log-Normal (Black 1976) · Options: Cash-or-Nothing Digital · Evaluation: Brier Score &amp; Calibration<br>
+    Agent: OLS Confidence Regression · Half-Kelly Sizing · Periodic LLM Review · Segment Overrides
+  </p>
+</div>
+
+</main>
+</div>
+
+<script>
+  // Reading progress bar
+  const bar = document.getElementById('progress');
+  window.addEventListener('scroll', () => {
+    const s = document.documentElement.scrollTop;
+    const h = document.documentElement.scrollHeight - window.innerHeight;
+    bar.style.width = (h > 0 ? (s / h) * 100 : 0) + '%';
+  }, { passive: true });
+
+  // Ghost section numbers
+  document.querySelectorAll('h2[data-n]').forEach(h => {
+    h.setAttribute('data-n', h.getAttribute('data-n'));
+  });
+
+  // Scroll-spy for nav
+  const sections = Array.from(document.querySelectorAll('h2[id], h3[id]'));
+  const links    = Array.from(document.querySelectorAll('#sidenav a'));
+
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const id = entry.target.id;
+        links.forEach(a => {
+          a.classList.toggle('active', a.getAttribute('href') === '#' + id);
+        });
+      }
+    });
+  }, { rootMargin: '-10% 0px -80% 0px' });
+
+  sections.forEach(s => observer.observe(s));
+</script>
+
+</body>
+</html>

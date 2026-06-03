@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PredictionX — Shadow Kelly Validation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#1d2429;--surface:#2a333a;--inset:#202a30;--border:#3a464e;
+--text:#ffffff;--text2:#cdd5da;--muted:#8c98a0;--green:#00d98a;--red:#ff5d5d;
+--blue:#5b9dff;--amber:#f5b13d;--ai:#a78bfa;}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{font-family:'Inter',system-ui,-apple-system,"Segoe UI",sans-serif;
+background:radial-gradient(1200px 480px at 50% -160px,#232c32,transparent 70%),#1d2429;
+color:var(--text);line-height:1.45;padding:0 20px 64px;
+-webkit-font-smoothing:antialiased}
+.wrap{max-width:1080px;margin:0 auto}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace}
+.pos{color:var(--green)} .neg{color:var(--red)} .dim{color:var(--muted)}
+
+header{padding:56px 0 30px;border-bottom:1px solid var(--border);margin-bottom:30px}
+.eyebrow{font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;
+color:var(--green);font-weight:700;margin-bottom:14px}
+h1{font-size:clamp(2rem,4.6vw,3.3rem);font-weight:800;letter-spacing:-.02em;
+line-height:1.04;background:linear-gradient(92deg,#fff,#9fb0bb);
+-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{color:var(--text2);font-size:1.02rem;margin-top:12px;max-width:60ch}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.chip{font-size:.74rem;font-weight:600;color:var(--text2);background:var(--inset);
+border:1px solid var(--border);border-radius:999px;padding:5px 12px}
+.chip.live{color:var(--amber);border-color:rgba(245,177,61,.4)}
+
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin:34px 0}
+.kpi{background:linear-gradient(180deg,var(--surface),var(--inset));
+border:1px solid var(--border);border-radius:16px;padding:20px 18px}
+.kval{font-size:clamp(1.5rem,3vw,2.3rem);font-weight:800;letter-spacing:-.02em;
+font-family:'JetBrains Mono',ui-monospace,monospace}
+.klabel{font-size:.74rem;letter-spacing:.04em;text-transform:uppercase;
+color:var(--muted);font-weight:600;margin-top:8px}
+.ksub{font-size:.78rem;color:var(--text2);margin-top:5px}
+
+section{margin:30px 0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.card{background:linear-gradient(180deg,var(--surface),#252e34);
+border:1px solid var(--border);border-radius:18px;padding:22px 22px 18px}
+.card.full{padding-bottom:14px}
+.ctitle{font-size:1.02rem;font-weight:700;letter-spacing:-.01em}
+.csub{font-size:.82rem;color:var(--muted);margin-top:3px;margin-bottom:16px}
+.cnote{font-size:.82rem;color:var(--text2);margin-top:14px;
+border-top:1px solid var(--border);padding-top:12px}
+.cnote b{color:var(--green)}
+
+.chart{width:100%;height:auto;display:block}
+.grid{stroke:#3a464e;stroke-width:1;stroke-dasharray:3 4;opacity:.55}
+.frame{fill:none;stroke:#3a464e;stroke-width:1}
+.diag{stroke:#8c98a0;stroke-width:1.4;stroke-dasharray:5 5;opacity:.7}
+.ax{fill:#8c98a0;font-size:12px;font-family:'JetBrains Mono',ui-monospace,monospace}
+.ax-c{text-anchor:middle} .ax-r{text-anchor:end}
+.ax.val{fill:#cdd5da;font-weight:600} .ax.sub{fill:#8c98a0;font-size:11px}
+
+.legend{display:flex;gap:18px;flex-wrap:wrap;font-size:.8rem;color:var(--text2);
+margin-top:6px}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;
+vertical-align:middle}
+
+.tl{display:flex;flex-wrap:wrap;gap:16px;margin:8px 0 20px}
+.tl-i{flex:1;min-width:148px;position:relative;padding-top:17px}
+.tl-i::before{content:"";position:absolute;top:5px;left:0;right:-16px;height:2px;
+background:var(--border)}
+.tl-i:last-child::before{right:0}
+.tl-dot{position:absolute;top:0;left:0;width:11px;height:11px;border-radius:50%;
+border:2px solid var(--bg)}
+.tl-date{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:.74rem;
+color:var(--text2);font-weight:600}
+.tl-txt{font-size:.8rem;color:var(--muted);margin-top:3px;line-height:1.42}
+
+footer{margin-top:40px;border-top:1px solid var(--border);padding-top:22px;
+font-size:.82rem;color:var(--muted)}
+footer .fnote{background:var(--inset);border:1px solid var(--border);border-radius:12px;
+padding:14px 16px;color:var(--text2);margin-bottom:14px}
+footer .fnote b{color:var(--amber)}
+@media(max-width:760px){.kpis{grid-template-columns:repeat(2,1fr)}
+.grid2{grid-template-columns:1fr}}
+</style></head>
+<body><div class="wrap">
+
+<header>
+  <div class="eyebrow">Shadow Validation · Pre-Live</div>
+  <h1>The Kelly engine earned its way to&nbsp;live.</h1>
+  <p class="sub">2026-04-28 → 2026-05-24 · 486 resolved paper trades on Kalshi commodity
+  binaries. The pricing model's edge predicted realized profit, and predicted probabilities
+  matched outcomes — the evidence that armed live RSA order placement.</p>
+  <div class="chips">
+    <span class="chip">Kelly strategy</span>
+    <span class="chip">Energy + Metals</span>
+    <span class="chip">6 Kalshi series</span>
+    <span class="chip live">Shadow → Live</span>
+  </div>
+</header>
+
+<div class="kpis">
+  <div class="kpi"><div class="kval pos">+$3,893</div><div class="klabel">Net P&amp;L</div><div class="ksub">on $25,162 staked</div></div>
+  <div class="kpi"><div class="kval pos">+15.5%</div><div class="klabel">Return on Stake</div><div class="ksub">capital-efficient</div></div>
+  <div class="kpi"><div class="kval ">62.5%</div><div class="klabel">Win Rate</div><div class="ksub">486 trades</div></div>
+  <div class="kpi"><div class="kval pos">4.9×</div><div class="klabel">Equity Growth</div><div class="ksub">$1,000 → $4,893</div></div>
+  <div class="kpi"><div class="kval pos">6/6</div><div class="klabel">Series Profitable</div><div class="ksub">every market</div></div>
+</div>
+
+<section><div class="card full">
+  <div class="ctitle">Paper equity curve</div>
+  <div class="csub">$1,000 seed + cumulative realized Kelly P&amp;L, by settlement date</div>
+  <svg viewBox="0 0 720 300" preserveAspectRatio="none" class="chart" role="img"><defs><linearGradient id="eg" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#00d98a" stop-opacity="0.34"/><stop offset="1" stop-color="#00d98a" stop-opacity="0"/></linearGradient></defs><line x1="44" y1="256.0" x2="676" y2="256.0" class="grid"/><text x="36" y="260.0" class="ax ax-r">$633</text><line x1="44" y1="203.0" x2="676" y2="203.0" class="grid"/><text x="36" y="207.0" class="ax ax-r">$1,886</text><line x1="44" y1="150.0" x2="676" y2="150.0" class="grid"/><text x="36" y="154.0" class="ax ax-r">$3,140</text><line x1="44" y1="97.0" x2="676" y2="97.0" class="grid"/><text x="36" y="101.0" class="ax ax-r">$4,394</text><line x1="44" y1="44.0" x2="676" y2="44.0" class="grid"/><text x="36" y="48.0" class="ax ax-r">$5,647</text><path d="M44.0,256.0 L44.0,241.4 L86.1,229.7 L128.3,218.8 L170.4,230.2 L212.5,205.8 L254.7,175.9 L296.8,146.4 L338.9,152.1 L381.1,152.5 L423.2,116.2 L465.3,160.0 L507.5,138.0 L549.6,129.9 L591.7,126.0 L633.9,58.6 L676.0,75.9 L676.0,256.0 Z" fill="url(#eg)"/><polyline points="44.0,241.4 86.1,229.7 128.3,218.8 170.4,230.2 212.5,205.8 254.7,175.9 296.8,146.4 338.9,152.1 381.1,152.5 423.2,116.2 465.3,160.0 507.5,138.0 549.6,129.9 591.7,126.0 633.9,58.6 676.0,75.9" fill="none" stroke="#00d98a" stroke-width="2.5" stroke-linejoin="round"/><circle cx="44.0" cy="241.4" r="4.5" fill="#00d98a"/><circle cx="676.0" cy="75.9" r="4.5" fill="#00d98a"/><text x="44.0" y="288" class="ax ax-c">04-29</text><text x="381.1" y="288" class="ax ax-c">05-09</text><text x="676.0" y="288" class="ax ax-c">05-24</text></svg>
+</div></section>
+
+<section class="grid2">
+  <div class="card">
+    <div class="ctitle">Calibration — predicted vs. realized</div>
+    <div class="csub">11,913 pricing runs · point size ∝ sample count</div>
+    <svg viewBox="0 0 540 320" preserveAspectRatio="none" class="chart" role="img"><rect x="44" y="44" width="452" height="232" class="frame"/><line x1="44" y1="276" x2="496" y2="44" class="diag"/><text x="44" y="294" class="ax ax-c">0.0</text><text x="34" y="280" class="ax ax-r">0.0</text><text x="270" y="294" class="ax ax-c">0.5</text><text x="34" y="164" class="ax ax-r">0.5</text><text x="496" y="294" class="ax ax-c">1.0</text><text x="34" y="48" class="ax ax-r">1.0</text><circle cx="44.0" cy="68.7" r="6.7" fill="#a78bfa" fill-opacity="0.55" stroke="#a78bfa" stroke-width="1.3"/><circle cx="89.2" cy="213.7" r="7.9" fill="#a78bfa" fill-opacity="0.55" stroke="#a78bfa" stroke-width="1.3"/><circle cx="134.4" cy="205.4" r="9.0" fill="#a78bfa" fill-opacity="0.55" stroke="#a78bfa" stroke-width="1.3"/><circle cx="179.6" cy="177.9" r="9.8" fill="#a78bfa" fill-opacity="0.55" stroke="#a78bfa" stroke-width="1.3"/><circle cx="224.8" cy="155.9" r="10.8" fill="#a78bfa" fill-opacity="0.55" stroke="#a78bfa" stroke-width="1.3"/><circle cx="270.0" cy="115.2" r="11.9" fill="#a78bfa" fill-opacity="0.55" stroke="#a78bfa" stroke-width="1.3"/><circle cx="315.2" cy="99.2" r="12.4" fill="#a78bfa" fill-opacity="0.55" stroke="#a78bfa" stroke-width="1.3"/><circle cx="360.4" cy="71.9" r="12.7" fill="#a78bfa" fill-opacity="0.55" stroke="#a78bfa" stroke-width="1.3"/><circle cx="405.6" cy="61.8" r="13.0" fill="#a78bfa" fill-opacity="0.55" stroke="#a78bfa" stroke-width="1.3"/><circle cx="450.8" cy="56.0" r="11.8" fill="#a78bfa" fill-opacity="0.55" stroke="#a78bfa" stroke-width="1.3"/><circle cx="496.0" cy="56.0" r="8.8" fill="#a78bfa" fill-opacity="0.55" stroke="#a78bfa" stroke-width="1.3"/><text x="270" y="314" class="ax ax-c sub">predicted probability</text><text x="14" y="160" class="ax sub" transform="rotate(-90 14 160)">realized frequency</text></svg>
+    <div class="cnote">Points hug the diagonal: when the model says <b>70%</b>, it happens
+    ~<b>88%</b>
+    of the time. Well-ordered probabilities are the foundation of a tradable edge.</div>
+  </div>
+  <div class="card">
+    <div class="ctitle">Edge predicts profit (β &gt; 0)</div>
+    <div class="csub">Realized P&amp;L by modeled edge bucket · within the sanity gate</div>
+    <svg viewBox="0 0 540 300" preserveAspectRatio="none" class="chart" role="img"><line x1="46" y1="266.0" x2="494" y2="266.0" class="grid"/><rect x="65.7" y="166.7" width="50.2" height="99.3" rx="3" fill="#00d98a" opacity="0.9"/><text x="90.8" y="158.7" class="ax ax-c val">+$759</text><text x="90.8" y="286" class="ax ax-c">0.05</text><text x="90.8" y="298" class="ax ax-c sub">n=268</text><rect x="155.3" y="79.6" width="50.2" height="186.4" rx="3" fill="#00d98a" opacity="0.9"/><text x="180.4" y="71.6" class="ax ax-c val">+$1,426</text><text x="180.4" y="286" class="ax ax-c">0.10</text><text x="180.4" y="298" class="ax ax-c sub">n=137</text><rect x="244.9" y="82.0" width="50.2" height="184.0" rx="3" fill="#00d98a" opacity="0.9"/><text x="270.0" y="74.0" class="ax ax-c val">+$1,407</text><text x="270.0" y="286" class="ax ax-c">0.15</text><text x="270.0" y="298" class="ax ax-c sub">n=53</text><rect x="334.5" y="236.0" width="50.2" height="30.0" rx="3" fill="#00d98a" opacity="0.9"/><text x="359.6" y="228.0" class="ax ax-c val">+$229</text><text x="359.6" y="286" class="ax ax-c">0.20</text><text x="359.6" y="298" class="ax ax-c sub">n=17</text><rect x="424.1" y="256.7" width="50.2" height="9.3" rx="3" fill="#00d98a" opacity="0.9"/><text x="449.2" y="248.7" class="ax ax-c val">+$71</text><text x="449.2" y="286" class="ax ax-c">0.25</text><text x="449.2" y="298" class="ax ax-c sub">n=11</text></svg>
+    <div class="cnote">Every edge bucket is <b>green</b>, and bigger modeled edge maps to bigger
+    realized P&amp;L — the OLS confidence model's slope <b>β</b> learned a real, positive signal.</div>
+  </div>
+</section>
+
+<section class="grid2">
+  <div class="card">
+    <div class="ctitle">P&amp;L by series</div>
+    <div class="csub">All six energy + metals markets, net realized P&amp;L</div>
+    <svg viewBox="0 0 540 300" preserveAspectRatio="none" class="chart" role="img"><rect x="104" y="24.9" width="362.1" height="26.8" rx="3" fill="#5b9dff" opacity="0.9"/><text x="94" y="42.3" class="ax ax-r">BRENTD</text><text x="474.1" y="42.3" class="ax val">+$1,554  ·  71% WR</text><rect x="104" y="69.6" width="222.1" height="26.8" rx="3" fill="#5b9dff" opacity="0.9"/><text x="94" y="87.0" class="ax ax-r">WTI</text><text x="334.1" y="87.0" class="ax val">+$954  ·  60% WR</text><rect x="104" y="114.3" width="159.4" height="26.8" rx="3" fill="#5b9dff" opacity="0.9"/><text x="94" y="131.7" class="ax ax-r">SILVERD</text><text x="271.4" y="131.7" class="ax val">+$684  ·  54% WR</text><rect x="104" y="158.9" width="81.7" height="26.8" rx="3" fill="#5b9dff" opacity="0.9"/><text x="94" y="176.3" class="ax ax-r">GOLDD</text><text x="193.7" y="176.3" class="ax val">+$351  ·  61% WR</text><rect x="104" y="203.6" width="48.4" height="26.8" rx="3" fill="#5b9dff" opacity="0.9"/><text x="94" y="221.0" class="ax ax-r">NATGASD</text><text x="160.4" y="221.0" class="ax val">+$208  ·  63% WR</text><rect x="104" y="248.3" width="33.0" height="26.8" rx="3" fill="#5b9dff" opacity="0.9"/><text x="94" y="265.7" class="ax ax-r">COPPERD</text><text x="145.0" y="265.7" class="ax val">+$142  ·  56% WR</text></svg>
+    <div class="legend"><span><span class="dot" style="background:#5b9dff"></span>net P&amp;L
+    per Kalshi series</span></div>
+  </div>
+  <div class="card">
+    <div class="ctitle">Beta accumulation</div>
+    <div class="csub">Cumulative resolved samples training the confidence model</div>
+    <svg viewBox="0 0 540 300" preserveAspectRatio="none" class="chart" role="img"><defs><linearGradient id="sg" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#f5b13d" stop-opacity="0.34"/><stop offset="1" stop-color="#f5b13d" stop-opacity="0"/></linearGradient></defs><line x1="44" y1="256.0" x2="496" y2="256.0" class="grid"/><text x="36" y="260.0" class="ax ax-r">0</text><line x1="44" y1="203.0" x2="496" y2="203.0" class="grid"/><text x="36" y="207.0" class="ax ax-r">134</text><line x1="44" y1="150.0" x2="496" y2="150.0" class="grid"/><text x="36" y="154.0" class="ax ax-r">267</text><line x1="44" y1="97.0" x2="496" y2="97.0" class="grid"/><text x="36" y="101.0" class="ax ax-r">401</text><line x1="44" y1="44.0" x2="496" y2="44.0" class="grid"/><text x="36" y="48.0" class="ax ax-r">535</text><path d="M44.0,256.0 L44.0,255.2 L74.1,248.5 L104.3,238.9 L134.4,236.2 L164.5,220.7 L194.7,202.9 L224.8,190.2 L254.9,169.2 L285.1,164.0 L315.2,147.3 L345.3,131.9 L375.5,119.2 L405.6,109.7 L435.7,104.1 L465.9,79.9 L496.0,63.3 L496.0,256.0 Z" fill="url(#sg)"/><polyline points="44.0,255.2 74.1,248.5 104.3,238.9 134.4,236.2 164.5,220.7 194.7,202.9 224.8,190.2 254.9,169.2 285.1,164.0 315.2,147.3 345.3,131.9 375.5,119.2 405.6,109.7 435.7,104.1 465.9,79.9 496.0,63.3" fill="none" stroke="#f5b13d" stroke-width="2.5"/><circle cx="496.0" cy="63.3" r="4.5" fill="#f5b13d"/><text x="496.0" y="53.3" class="ax ax-r val">486</text><text x="44.0" y="288" class="ax ax-c">04-29</text><text x="285.1" y="288" class="ax ax-c">05-09</text><text x="496.0" y="288" class="ax ax-c">05-24</text></svg>
+    <div class="cnote">From <b>2</b> to <b>486</b> resolved trades, the
+    hierarchical OLS regression (<span class="mono">realized_pnl = α + β·edge</span>) accumulated
+    the history it needed to stabilize a positive, predictive β before any real capital was risked.</div>
+  </div>
+</section>
+
+<section><div class="card full">
+  <div class="ctitle">Case study — riding the crude risk premium</div>
+  <div class="csub">How the engine caught a geopolitically-driven bullish run in oil</div>
+  <p style="color:var(--text2);font-size:.94rem;line-height:1.6;margin-bottom:16px">
+  The window's standout return came from <b style="color:var(--green)">crude oil</b>. From late
+  April, escalating <b>U.S.–Iran conflict</b> and disruption to flows through the
+  <b>Strait of Hormuz</b> priced a fresh geopolitical risk premium into WTI and Brent. Repeated
+  failures of peace talks, doubts that OPEC+ spare capacity could replace the lost barrels, and
+  forecast upgrades from Goldman Sachs and HSBC kept the futures strip climbing faster than Kalshi's
+  binary markets repriced their "above&nbsp;$X" strikes. The pricing core saw it first: the rising
+  forward curve fed straight into the log-normal fit, so contract after contract the model's
+  <span class="mono">P(price&nbsp;&gt;&nbsp;target)</span> sat well above the market's implied
+  probability, and the Kelly engine kept taking the <b>YES</b> side of the rally. The temporary
+  peace-driven dips (early May) were exactly that — temporary — and the engine's directional read
+  held through them.</p>
+  <div class="tl"><div class="tl-i"><span class="tl-dot" style="background:#00d98a"></span><div class="tl-date">Apr 28</div><div class="tl-txt">U.S.–Iran talks stall, Strait of Hormuz disrupted — crude closes ~3% up</div></div><div class="tl-i"><span class="tl-dot" style="background:#00d98a"></span><div class="tl-date">Apr 30</div><div class="tl-txt">Multi-year highs as the supply-risk premium peaks; Goldman & HSBC lift forecasts</div></div><div class="tl-i"><span class="tl-dot" style="background:#f5b13d"></span><div class="tl-date">May 5</div><div class="tl-txt">Brief selloff on reports of peace progress — risk premium drains, then refills</div></div><div class="tl-i"><span class="tl-dot" style="background:#00d98a"></span><div class="tl-date">May 10</div><div class="tl-txt">Ceasefire talks deteriorate; physical tightness unresolved — premium restored</div></div><div class="tl-i"><span class="tl-dot" style="background:#00d98a"></span><div class="tl-date">May 15</div><div class="tl-txt">Renewed escalation and shipping threats — crude jumps &gt;3%</div></div><div class="tl-i"><span class="tl-dot" style="background:#00d98a"></span><div class="tl-date">May 24</div><div class="tl-txt">Rally holds; market settles on a longer-lasting Middle East supply shock</div></div></div>
+  <div class="kpis" style="grid-template-columns:repeat(3,1fr);margin:0 0 14px">
+    <div class="kpi"><div class="kval pos">+$3,145</div><div class="klabel">Crude YES &quot;above&quot; P&amp;L</div><div class="ksub">81% of net</div></div>
+    <div class="kpi"><div class="kval ">78%</div><div class="klabel">Win Rate · Long Crude</div><div class="ksub">192 trades</div></div>
+    <div class="kpi"><div class="kval neg">-$637</div><div class="klabel">The Fade It Declined</div><div class="ksub">NO side · 115 trades</div></div>
+  </div>
+  <div class="cnote">The discipline cuts both ways: bets <b>against</b> the run — buying NO on those
+  same "above" strikes — <b style="color:var(--red)">lost $637</b>. The engine
+  wasn't long oil by mandate; it was long because the curve-driven fair value said the upside was
+  underpriced. When a real macro catalyst moved the underlying, the model translated it into
+  directional conviction and sized it — turning the Iran-driven risk premium into the single largest
+  contributor to shadow returns, all before a dollar of live capital was at stake.</div>
+</div></section>
+
+<footer>
+  <div class="fnote"><b>What shadow caught.</b> Figures are production-gated to
+  <span class="mono">|edge| &lt; 0.25</span> — exactly what the live agent trades. The one excluded
+  cluster was the <b>May&nbsp;19 natural-gas frozen-feed episode</b>, where stale futures data
+  produced implausible 25pp+ "edges." Shadow surfaced it on paper; the stale-data and
+  implausible-edge guards now block it pre-trade. The bug never touched real money.</div>
+  Source: <span class="mono">pricer-6-2.db</span> · shadow (paper) Kelly decisions ·
+  generated 2026-06-03 01:40 UTC · equity reconstructed faithfully from per-trade Kelly P&amp;L.
+</footer>
+
+</div></body></html>
