@@ -2,12 +2,6 @@
 
 **TL;DR** — A live trading system that prices binary commodity contracts on Kalshi with a Black-76 futures model, ranks them by edge, and lets an autonomous agent place real Kelly-sized limit orders. Scope is **energy + metals** (WTI, Brent, natural gas, gold, silver, copper). Shadow by default; `--live` arms real RSA-signed execution. The portfolio is tracked through a phone-first PWA.
 
-> A live quantitative trading system for commodity prediction markets — fair-value pricing, an autonomous strategy agent, and real RSA-signed order execution on Kalshi.
-
-**PredictionX prices binary commodity contracts on [Kalshi](https://kalshi.com) against a Black-76 futures model, ranks the market by edge, and executes against it.** The agent places real RSA-signed limit orders, sized by fractional Kelly on cash-on-hand. All fills are reconciled, every contract is scored against actual settlement, and the portfolio is surfaced through a phone-first dashboard.
-
-Coverage is deliberately narrow: **energy and metals only** — WTI crude, Brent crude, natural gas, gold, silver, copper. These are the asset classes in which a futures-curve model holds a structural informational advantage over the prediction-market mid.
-
 > **About this repository.** This is a public **showcase** of a personal quantitative-trading project. The implementation lives in a separate private repository; this repo presents the design, methodology, and results. It is meant to be read, not run.
 
 ## Documentation
@@ -25,8 +19,11 @@ Coverage is deliberately narrow: **energy and metals only** — WTI crude, Brent
 - **First-principles pricing.** Binary contracts are valued as cash-or-nothing digital options via a closed-form Black-76 `N(d₂)` model fit to the futures strip, with regime-aware realized volatility.
 - **Settlement-source correctness.** Gold and silver are routed through Pyth Network spot (`XAU/USD`, `XAG/USD`) — the actual Kalshi settlement source — rather than COMEX futures, a distinction that flips real resolutions.
 - **Self-calibrating learning loop.** The agent debiases its own edge with an OLS confidence regression on its resolved track record, and a periodic Claude "fund-manager review" writes runtime overrides — no restart, no redeploy.
+- **AI embedded in the trading workflow.** `claude-sonnet-4-6` is a live operational component — fed the agent's full performance analytics, it returns typed `segment_overrides` that recalibrate the signal pipeline at runtime without a redeploy.
 - **Risk-aware sizing.** Fractional Kelly on cash-on-hand (not total bankroll), EV-ordered, behind layered safety guards (stale-data rejection, implausible-edge gate, per-series and portfolio exposure caps).
 - **Honest measurement.** Every decision is scored against actual settlement with Brier Skill Score *relative to the market mid* as the benchmark — a strictly proper test of whether the model beats the market it trades against.
+- **Three-tier API architecture.** A FastAPI service exposes a read-only portfolio API behind `X-API-Key` middleware; a Vercel serverless proxy injects credentials before forwarding; the PWA holds no secrets — write authority, read access, and presentation are strictly separated.
+- **Deployed and running.** The full trading loop — reconcile, scan, price, size, execute — runs 24/7 as a systemd service on a VPS, placing real orders continuously without human intervention.
 - **Full test isolation.** Every external API (Kalshi, yfinance, Pyth, Anthropic) is mocked; no test issues a live network call.
 
 ---
@@ -42,8 +39,6 @@ Kalshi offers contracts of the form *"Will WTI crude settle above $80 at month-e
 5. **Compare** fair value against the Kalshi mid — that spread constitutes the **edge**.
 6. **Trade** it: the agent debiases raw edge through an OLS confidence regression fitted on its own resolved track record (restricted to post-Pyth-alignment runs), sizes with fractional Kelly on cash-on-hand, and submits a signed limit order in live mode.
 7. **Score** all decisions against actual settlements using Brier score and Brier Skill Score relative to the market mid as the benchmark forecast.
-
-A periodic **fund-manager review** (Claude) reads the accumulated track record, identifies structurally under- or out-performing segments, and writes runtime overrides that recalibrate the agent's confidence — a learning loop that tightens calibration as resolutions accumulate.
 
 ---
 
@@ -126,7 +121,7 @@ A single `pricer` CLI (Python 3.11+) drives the system — the surface area at a
 | **Review** | Triggers the periodic Claude fund-manager review that recalibrates the agent via runtime segment overrides. |
 | **Dashboards** | A local Streamlit analytics view and a deployed phone-first PWA over the live portfolio. |
 
-Pricing and scanning run against Kalshi's unauthenticated public market data; the learning loop and live execution add Claude and RSA-signed Kalshi credentials respectively. Shadow and live runs write to separate SQLite databases, distinguished by a `live_mode` flag so the calibration model trains on the complete decision history.
+Pricing and scanning run against Kalshi's unauthenticated public market data; the learning loop and live execution add Claude and RSA-signed Kalshi credentials respectively.
 
 ---
 
@@ -218,8 +213,6 @@ The mathematical treatment — `d₂` derivation, vol regimes, time-value decay,
 ## Autonomous Trading Agent
 
 **Signal pipeline.** For every contract that clears the pre-pricing filters (sufficient liquidity, mid within the priceable band, within the active TTX/DTE window, spread sufficiently tight), the agent prices both sides, computes `raw_edge = fair_value − market_price`, then retrieves `(α, β)` from an OLS regression of historical realized P&L on raw edge at the most specific segment available — `series + direction + bucket` → `series + bucket` → `global + bucket` → `global` → prior `(0, 0.5)`. The regression is restricted to runs at or after `training_cutoff_date` (if set). The traded signal is `adjusted_edge = α + β · raw_edge`. Classification: `< θ` → **watch** (zero size, journaled) · `[θ, 2θ)` → **auto-buy** · `≥ 2θ` → **clear-buy**.
-
-**Sizing.** Half-Kelly on the binary formula, capped at 10% of bankroll, sized off cash-on-hand, funded in decreasing order of `f*` within the cycle.
 
 **Safety guards.** Before any live order: *(1)* stale or frozen futures data is rejected before pricing proceeds; *(2)* raw edge ≥ 25pp → `watch` with reason `raw_edge_implausible`; *(3)* insufficient live cash for the current cycle; *(4)* directional asymmetry — at most 3 buys in the same `(series, direction)` per cycle; *(5)* series exposure cap — execution is blocked if it would push that series beyond 20% of account value; *(6)* portfolio exposure cap — execution is blocked if total deployed capital would exceed 40% of account value. The absence of a valid ask results in a skip rather than a 1¢ resting bid.
 
